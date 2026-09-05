@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-<<<<<<< HEAD
 using dev_sandbox.Core;
-=======
 using dev_sandbox;
->>>>>>> c9d5dce7f61a6a5576af11672beeb3ebab6ea7c0
 using NUnit.Framework;
 
 namespace PomodoroEngineTests
