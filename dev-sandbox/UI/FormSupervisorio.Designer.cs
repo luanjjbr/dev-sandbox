@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             groupBox1 = new GroupBox();
             btnEnviar = new Button();
             txtEnviar = new TextBox();
@@ -40,6 +41,7 @@
             cboBaudRate = new ComboBox();
             cboPortas = new ComboBox();
             label1 = new Label();
+            timer1 = new System.Windows.Forms.Timer(components);
             groupBox1.SuspendLayout();
             SuspendLayout();
             // 
@@ -160,13 +162,22 @@
             label1.TabIndex = 0;
             label1.Text = "Portas: ";
             // 
+            // timer1
+            // 
+            //timer1.Tick += timer1_Tick;
+            // 
             // FormSupervisorio
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            AutoSize = true;
             ClientSize = new Size(800, 450);
             Controls.Add(groupBox1);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            FormScreenCaptureMode = ScreenCaptureMode.HideContent;
+            MaximizeBox = false;
             Name = "FormSupervisorio";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Supervisorio";
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
@@ -187,5 +198,6 @@
         private Button btnEnviar;
         private TextBox txtEnviar;
         private TextBox txtHistorico;
+        private System.Windows.Forms.Timer timer1;
     }
 }
