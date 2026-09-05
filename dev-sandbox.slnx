@@ -1,4 +1,4 @@
 <Solution>
   <Project Path="dev-sandbox/dev-sandbox.csproj" />
-  <Project Path="PomodoroEngineTests/PomodoroEngineTests.csproj" Id="26fc5302-6183-43b9-9d92-ea99b9cc4c7e" />
+  <Project Path="PomodoroEngineTests/Tests.csproj" Id="26fc5302-6183-43b9-9d92-ea99b9cc4c7e" />
 </Solution>
