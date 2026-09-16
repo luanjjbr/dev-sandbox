@@ -427,3 +427,33 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ==============================================================================
+# Regras Adicionais: IDEs, Sistema Operacional e Arquivos Locais
+# ==============================================================================
+
+# JetBrains Rider & ReSharper
+.idea/
+*.sln.iml
+_ReSharper*/
+*.DotSettings.user
+*.resharper
+
+# Sistema Operacional (Windows / macOS / Linux)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+
+# Variáveis de Ambiente e Arquivos Locais
+.env
+.env.*
+*.env.local
+*.local
+
+# Caches de Ferramentas e IA
+.gemini/
+.agents/
+
