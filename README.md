@@ -13,8 +13,9 @@ dev-sandbox/
 ├── dev-sandbox.slnx               # Arquivo de solução (Visual Studio Solution XML)
 ├── CONTEXT.md                     # Documento de contexto técnico e arquitetural
 ├── publish-standalone.ps1         # Script para gerar executável único standalone
-├── dist/                          # Pasta de distribuição (gerada automaticamente no build)
-│   └── standalone/                # Executável único (.exe) que roda sem precisar do .NET
+├── app/                           # Pasta rastreada no Git com o executável pronto para uso
+│   └── DevSandbox.UI.exe          # Executável único (.exe) que roda sem precisar do .NET
+├── dist/                          # Pasta de compilação local (gerada automaticamente no build)
 ├── src/
 │   ├── DevSandbox.Core/           # [Camada de Domínio / Regras de Negócio]
 │   │   └── <Modulos_Logicos>/     # Motores, algoritmos, comunicação e utilitários puros
@@ -120,11 +121,11 @@ Se você quiser enviar o aplicativo para outra pessoa rodar sem que ela precise 
    ```
    *(Ou execute via terminal: `dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/standalone`)*
 
-2. O arquivo único gerado ficará disponível em:
+2. O script copia automaticamente o executável único otimizado para a pasta:
    ```plaintext
-   dist/standalone/DevSandbox.UI.exe
+   app/DevSandbox.UI.exe
    ```
-3. **Basta enviar esse único arquivo `.exe`!** Ele já empacota o runtime completo do .NET 10 e tudo o que é necessário para abrir com dois cliques em qualquer Windows 10 ou 11.
+3. **Pronto para o Git e Envio:** Como a pasta `app/` é rastreada pelo Git, sempre que você rodar `git add .` e `git commit`, esse `.exe` sobe junto para o seu repositório no GitHub! Além disso, você pode enviar apenas esse único arquivo `.exe` para qualquer pessoa rodar em Windows 10 ou 11 sem precisar instalar nada.
 
 ---
 

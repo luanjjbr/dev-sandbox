@@ -26,7 +26,10 @@ dev-sandbox/
 ├── dev-sandbox.slnx                     # Solução unificada
 ├── README.md                            # Guia rápido e documentação externa
 ├── CONTEXT.md                           # Memória técnica e contexto do projeto
-├── dist/                                # Executável e binários prontos para uso direto (gerados a cada build)
+├── publish-standalone.ps1               # Script para gerar executável único standalone
+├── app/                                 # Pasta rastreada no Git com o executável único pronto
+│   └── DevSandbox.UI.exe                # Executável autocontido pronto para uso e upload no GitHub
+├── dist/                                # Executáveis e binários locais (gerados a cada build)
 ├── src/
 │   ├── DevSandbox.Core/                 # Biblioteca de Classes (net10.0 pura)
 │   │   ├── Converters/                  # Algoritmos de conversão numérica
