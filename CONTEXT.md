@@ -26,6 +26,7 @@ dev-sandbox/
 ├── dev-sandbox.slnx                     # Solução unificada
 ├── README.md                            # Guia rápido e documentação externa
 ├── CONTEXT.md                           # Memória técnica e contexto do projeto
+├── dist/                                # Executável e binários prontos para uso direto (gerados a cada build)
 ├── src/
 │   ├── DevSandbox.Core/                 # Biblioteca de Classes (net10.0 pura)
 │   │   ├── Converters/                  # Algoritmos de conversão numérica
@@ -155,6 +156,12 @@ dotnet build dev-sandbox.slnx
 ### Executar a Aplicação Visual (UI)
 ```powershell
 dotnet run --project src/DevSandbox.UI/DevSandbox.UI.csproj
+```
+
+### Executar Diretamente o Executável (.exe)
+Sempre que a solução é compilada, os executáveis são automaticamente copiados para a pasta `dist/` na raiz. Você pode simplesmente abrir a pasta e clicar duas vezes em:
+```plaintext
+dist/DevSandbox.UI.exe
 ```
 
 ---

@@ -457,3 +457,8 @@ $RECYCLE.BIN/
 .gemini/
 .agents/
 
+# Pastas de Distribuição Local de Executáveis
+dist/
+publish/
+
+
