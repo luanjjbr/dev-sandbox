@@ -11,12 +11,16 @@ A solução segue a convenção padrão de mercado para ecossistemas .NET modern
 ```plaintext
 dev-sandbox/
 ├── dev-sandbox.slnx               # Arquivo de solução (Visual Studio Solution XML)
+├── CONTEXT.md                     # Documento de contexto técnico e arquitetural
+├── publish-standalone.ps1         # Script para gerar executável único standalone
+├── dist/                          # Pasta de distribuição (gerada automaticamente no build)
+│   └── standalone/                # Executável único (.exe) que roda sem precisar do .NET
 ├── src/
 │   ├── DevSandbox.Core/           # [Camada de Domínio / Regras de Negócio]
 │   │   └── <Modulos_Logicos>/     # Motores, algoritmos, comunicação e utilitários puros
 │   │
-│   └── DevSandbox.UI/             # [Camada de Apresentação / Interface Gráfica]
-│       ├── Common/                # Gerenciamento de temas, estilos e recursos visuais
+│   └── DevSandbox.UI/             # [Camada de Apresentação / Interface Gráfica Windows 11]
+│       ├── Common/                # Gerenciamento de temas e componentes Fluent
 │       ├── Forms/                 # Telas, janelas e painéis de controle
 │       └── Program.cs             # Ponto de inicialização do executável
 │
@@ -103,3 +107,32 @@ dotnet test dev-sandbox.slnx
 ```powershell
 dotnet run --project src/DevSandbox.UI/DevSandbox.UI.csproj
 ```
+
+---
+
+## 📦 Como Gerar e Enviar um Executável Único (Standalone)
+
+Se você quiser enviar o aplicativo para outra pessoa rodar sem que ela precise instalar o .NET ou qualquer biblioteca adicional no computador:
+
+1. Execute o script na raiz do projeto:
+   ```powershell
+   .\publish-standalone.ps1
+   ```
+   *(Ou execute via terminal: `dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/standalone`)*
+
+2. O arquivo único gerado ficará disponível em:
+   ```plaintext
+   dist/standalone/DevSandbox.UI.exe
+   ```
+3. **Basta enviar esse único arquivo `.exe`!** Ele já empacota o runtime completo do .NET 10 e tudo o que é necessário para abrir com dois cliques em qualquer Windows 10 ou 11.
+
+---
+
+## 📱 Compatibilidade Multiplataforma (Essa aplicação roda no Android?)
+
+* **A interface gráfica atual (`DevSandbox.UI`) roda no Android?**  
+  **Não**, pois foi desenvolvida em **Windows Forms** (`net10.0-windows`), que depende exclusivamente das APIs nativas do Windows (Win32, GDI+ e DWM).
+* **A lógica central (`DevSandbox.Core`) roda no Android?**  
+  **Sim, 100%!** Toda a camada de negócios (motores do Pomodoro, conversor de bases numéricas, cálculos e algoritmos) foi desenvolvida em .NET 10 puro (`net10.0`), totalmente desacoplada de janelas.
+* **Como levar o app para o Android no futuro?**  
+  Graças à arquitetura desacoplada do repositório, basta criar um novo projeto de interface mobile em **.NET MAUI** (`DevSandbox.Maui`) ou **Avalonia UI** e apontar diretamente para o `DevSandbox.Core`, reaproveitando 100% da lógica e dos testes existentes sem reescrever código.
