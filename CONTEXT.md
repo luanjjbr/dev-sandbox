@@ -164,6 +164,17 @@ Sempre que a solução é compilada, os executáveis são automaticamente copiad
 dist/DevSandbox.UI.exe
 ```
 
+### Gerar Executável Único para Enviar a Qualquer Pessoa (Single-File Standalone)
+Gera um único `.exe` de ~116 MB com o .NET 10 e tudo embutido. Quem receber esse arquivo não precisa instalar nada para rodar:
+```powershell
+.\publish-standalone.ps1
+```
+Ou via CLI:
+```powershell
+dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/standalone
+```
+O arquivo gerado fica pronto em `dist/standalone/DevSandbox.UI.exe`.
+
 ---
 
 ## 📊 6. Status Atual de Qualidade
