@@ -1,10 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0-windows7.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
+		<RootNamespace>DevSandbox.Tests</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -20,6 +21,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\dev-sandbox\dev-sandbox.csproj" />
+		<ProjectReference Include="..\..\src\DevSandbox.Core\DevSandbox.Core.csproj" />
 	</ItemGroup>
 </Project>
