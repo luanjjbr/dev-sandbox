@@ -36,6 +36,7 @@ namespace DevSandbox.UI.Forms
             // 
             // cardConfig
             // 
+            cardConfig.BackColor = Color.FromArgb(43, 43, 43);
             cardConfig.Controls.Add(lblTituloConfig);
             cardConfig.Controls.Add(btnLimpar);
             cardConfig.Controls.Add(btnConectar);
@@ -46,9 +47,9 @@ namespace DevSandbox.UI.Forms
             cardConfig.Controls.Add(lblBaudRate);
             cardConfig.Controls.Add(cboPortas);
             cardConfig.Controls.Add(lblPortas);
-            cardConfig.CornerRadius = 8;
             cardConfig.Location = new Point(14, 12);
             cardConfig.Name = "cardConfig";
+            cardConfig.Padding = new Padding(16);
             cardConfig.Size = new Size(540, 122);
             cardConfig.TabIndex = 0;
             // 
@@ -59,39 +60,47 @@ namespace DevSandbox.UI.Forms
             lblTituloConfig.ForeColor = Color.FromArgb(160, 160, 160);
             lblTituloConfig.Location = new Point(14, 10);
             lblTituloConfig.Name = "lblTituloConfig";
-            lblTituloConfig.Size = new Size(207, 15);
+            lblTituloConfig.Size = new Size(221, 15);
             lblTituloConfig.TabIndex = 9;
             lblTituloConfig.Text = "CONFIGURAÇÃO DA CONEXÃO SERIAL";
             // 
             // btnLimpar
             // 
+            btnLimpar.BackColor = Color.Transparent;
+            btnLimpar.FlatStyle = FlatStyle.Flat;
             btnLimpar.Font = new Font("Segoe UI", 9F);
             btnLimpar.Location = new Point(430, 74);
             btnLimpar.Name = "btnLimpar";
             btnLimpar.Size = new Size(95, 32);
             btnLimpar.TabIndex = 8;
             btnLimpar.Text = "Limpar Log";
+            btnLimpar.UseVisualStyleBackColor = false;
             btnLimpar.Click += btnLimpar_Click;
             // 
             // btnConectar
             // 
-            btnConectar.IsAccent = true;
+            btnConectar.BackColor = Color.Transparent;
+            btnConectar.FlatStyle = FlatStyle.Flat;
             btnConectar.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             btnConectar.Location = new Point(430, 32);
             btnConectar.Name = "btnConectar";
             btnConectar.Size = new Size(95, 34);
             btnConectar.TabIndex = 7;
             btnConectar.Text = "Conectar";
+            btnConectar.UseVisualStyleBackColor = false;
             btnConectar.Click += btnConectar_Click;
             // 
             // btnAtualizarPortas
             // 
+            btnAtualizarPortas.BackColor = Color.Transparent;
+            btnAtualizarPortas.FlatStyle = FlatStyle.Flat;
             btnAtualizarPortas.Font = new Font("Segoe UI", 9F);
             btnAtualizarPortas.Location = new Point(190, 34);
             btnAtualizarPortas.Name = "btnAtualizarPortas";
             btnAtualizarPortas.Size = new Size(34, 28);
             btnAtualizarPortas.TabIndex = 2;
             btnAtualizarPortas.Text = "🔄";
+            btnAtualizarPortas.UseVisualStyleBackColor = false;
             btnAtualizarPortas.Click += btnAtualizarPortas_Click;
             // 
             // lblStatus
@@ -168,34 +177,37 @@ namespace DevSandbox.UI.Forms
             // 
             // txtEnviar
             // 
+            txtEnviar.BackColor = Color.Transparent;
             txtEnviar.Location = new Point(14, 502);
             txtEnviar.Name = "txtEnviar";
-            txtEnviar.PlaceholderText = "Digite um comando ou texto para transmitir...";
+            txtEnviar.Padding = new Padding(10, 8, 10, 8);
             txtEnviar.Size = new Size(436, 34);
             txtEnviar.TabIndex = 2;
             // 
             // btnEnviar
             // 
-            btnEnviar.IsAccent = true;
+            btnEnviar.BackColor = Color.Transparent;
+            btnEnviar.FlatStyle = FlatStyle.Flat;
             btnEnviar.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             btnEnviar.Location = new Point(458, 502);
             btnEnviar.Name = "btnEnviar";
             btnEnviar.Size = new Size(96, 34);
             btnEnviar.TabIndex = 3;
             btnEnviar.Text = "Transmitir";
+            btnEnviar.UseVisualStyleBackColor = false;
             btnEnviar.Click += btnEnviar_Click;
             // 
             // FormSupervisorio
             // 
-            BackColor = Color.FromArgb(32, 32, 32);
-            ForeColor = Color.FromArgb(255, 255, 255);
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = Color.FromArgb(32, 32, 32);
             ClientSize = new Size(568, 548);
             Controls.Add(btnEnviar);
             Controls.Add(txtEnviar);
             Controls.Add(txtHistorico);
             Controls.Add(cardConfig);
+            ForeColor = Color.FromArgb(255, 255, 255);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FormSupervisorio";

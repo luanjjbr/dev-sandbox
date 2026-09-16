@@ -46,6 +46,7 @@ namespace DevSandbox.UI.Forms
 
             btnLimpar.IsAccent = false;
             btnAtualizarPortas.IsAccent = false;
+            btnEnviar.IsAccent = true;
         }
 
         private void CarregarPortasDisponiveis()
@@ -122,7 +123,7 @@ namespace DevSandbox.UI.Forms
                 {
                     _engine.EnviarDados(mensagem);
                     AppendHistorico($"[{DateTime.Now:HH:mm:ss}] Enviado -> {mensagem}");
-                    txtEnviar.Clear();
+                    // txtEnviar.Clear(); // Mantém o texto digitado após o envio
                 }
                 catch (Exception ex)
                 {
