@@ -38,6 +38,7 @@ namespace DevSandbox.UI.Forms
             ConfigurarCard(cardSupervisorio, lblTituloSupervisorio, lblDescSupervisorio, btnAbrirSupervisorio, AbrirSupervisorio);
             ConfigurarCard(cardPomodoro, lblTituloPomodoro, lblDescPomodoro, btnAbrirPomodoro, AbrirPomodoro);
             ConfigurarCard(cardCalculadora, lblTituloCalculadora, lblDescCalculadora, btnAbrirCalculadora, AbrirCalculadora);
+            ConfigurarCard(cardBancada, lblTituloBancada, lblDescBancada, btnAbrirBancada, AbrirBancada);
         }
 
         private void ConfigurarCard(FluentCard card, Label titulo, Label desc, FluentButton botao, Action aoClicar)
@@ -84,8 +85,17 @@ namespace DevSandbox.UI.Forms
             this.Show();
         }
 
+        private void AbrirBancada()
+        {
+            using var form = new FormBancada();
+            this.Hide();
+            form.ShowDialog();
+            this.Show();
+        }
+
         private void btnAbrirSupervisorio_Click(object sender, EventArgs e) => AbrirSupervisorio();
         private void btnAbrirPomodoro_Click(object sender, EventArgs e) => AbrirPomodoro();
         private void btnAbrirCalculadora_Click(object sender, EventArgs e) => AbrirCalculadora();
+        private void btnAbrirBancada_Click(object sender, EventArgs e) => AbrirBancada();
     }
 }

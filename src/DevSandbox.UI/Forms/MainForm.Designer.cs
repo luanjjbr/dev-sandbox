@@ -32,12 +32,17 @@ namespace DevSandbox.UI.Forms
             lblDescCalculadora = new Label();
             lblTituloCalculadora = new Label();
             btnAbrirCalculadora = new DevSandbox.UI.Common.FluentButton();
+            cardBancada = new DevSandbox.UI.Common.FluentCard();
+            lblDescBancada = new Label();
+            lblTituloBancada = new Label();
+            btnAbrirBancada = new DevSandbox.UI.Common.FluentButton();
             panelFooter = new Panel();
             lblFooter = new Label();
             panelHeader.SuspendLayout();
             cardSupervisorio.SuspendLayout();
             cardPomodoro.SuspendLayout();
             cardCalculadora.SuspendLayout();
+            cardBancada.SuspendLayout();
             panelFooter.SuspendLayout();
             SuspendLayout();
             // 
@@ -50,7 +55,7 @@ namespace DevSandbox.UI.Forms
             panelHeader.ForeColor = Color.FromArgb(255, 255, 255);
             panelHeader.Location = new Point(0, 0);
             panelHeader.Name = "panelHeader";
-            panelHeader.Size = new Size(740, 85);
+            panelHeader.Size = new Size(977, 85);
             panelHeader.TabIndex = 0;
             // 
             // lblTitulo
@@ -213,6 +218,52 @@ namespace DevSandbox.UI.Forms
             btnAbrirCalculadora.Text = "Abrir Calculadora";
             btnAbrirCalculadora.Click += btnAbrirCalculadora_Click;
             // 
+            // cardBancada
+            // 
+            cardBancada.Controls.Add(lblDescBancada);
+            cardBancada.Controls.Add(lblTituloBancada);
+            cardBancada.Controls.Add(btnAbrirBancada);
+            cardBancada.CornerRadius = 8;
+            cardBancada.EnableHoverEffect = true;
+            cardBancada.Cursor = Cursors.Hand;
+            cardBancada.Location = new Point(739, 105);
+            cardBancada.Name = "cardBancada";
+            cardBancada.Size = new Size(210, 245);
+            cardBancada.TabIndex = 4;
+            // 
+            // lblDescBancada
+            // 
+            lblDescBancada.Font = new Font("Segoe UI", 9F);
+            lblDescBancada.ForeColor = Color.FromArgb(160, 160, 160);
+            lblDescBancada.Location = new Point(14, 55);
+            lblDescBancada.Name = "lblDescBancada";
+            lblDescBancada.Size = new Size(182, 115);
+            lblDescBancada.TabIndex = 2;
+            lblDescBancada.Text = "Emulador de bancada para estações de recarga Modo 3. Controle de cabo (PP) e estados do veículo (CP).";
+            // 
+            // lblTituloBancada
+            // 
+            lblTituloBancada.AutoSize = true;
+            lblTituloBancada.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblTituloBancada.ForeColor = Color.FromArgb(255, 255, 255);
+            lblTituloBancada.Location = new Point(14, 18);
+            lblTituloBancada.Name = "lblTituloBancada";
+            lblTituloBancada.Size = new Size(160, 21);
+            lblTituloBancada.TabIndex = 0;
+            lblTituloBancada.Text = "⚡ Bancada EVSE";
+            // 
+            // btnAbrirBancada
+            // 
+            btnAbrirBancada.IsAccent = true;
+            btnAbrirBancada.CornerRadius = 6;
+            btnAbrirBancada.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            btnAbrirBancada.Location = new Point(14, 185);
+            btnAbrirBancada.Name = "btnAbrirBancada";
+            btnAbrirBancada.Size = new Size(182, 38);
+            btnAbrirBancada.TabIndex = 1;
+            btnAbrirBancada.Text = "Abrir Bancada";
+            btnAbrirBancada.Click += btnAbrirBancada_Click;
+            // 
             // panelFooter
             // 
             panelFooter.Controls.Add(lblFooter);
@@ -221,8 +272,8 @@ namespace DevSandbox.UI.Forms
             panelFooter.ForeColor = Color.FromArgb(160, 160, 160);
             panelFooter.Location = new Point(0, 375);
             panelFooter.Name = "panelFooter";
-            panelFooter.Size = new Size(740, 35);
-            panelFooter.TabIndex = 4;
+            panelFooter.Size = new Size(977, 35);
+            panelFooter.TabIndex = 5;
             // 
             // lblFooter
             // 
@@ -241,8 +292,9 @@ namespace DevSandbox.UI.Forms
             ForeColor = Color.FromArgb(255, 255, 255);
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(740, 410);
+            ClientSize = new Size(977, 410);
             Controls.Add(panelFooter);
+            Controls.Add(cardBancada);
             Controls.Add(cardCalculadora);
             Controls.Add(cardPomodoro);
             Controls.Add(cardSupervisorio);
@@ -260,6 +312,8 @@ namespace DevSandbox.UI.Forms
             cardPomodoro.PerformLayout();
             cardCalculadora.ResumeLayout(false);
             cardCalculadora.PerformLayout();
+            cardBancada.ResumeLayout(false);
+            cardBancada.PerformLayout();
             panelFooter.ResumeLayout(false);
             panelFooter.PerformLayout();
             ResumeLayout(false);
@@ -282,6 +336,10 @@ namespace DevSandbox.UI.Forms
         private Label lblTituloCalculadora;
         private Label lblDescCalculadora;
         private DevSandbox.UI.Common.FluentButton btnAbrirCalculadora;
+        private DevSandbox.UI.Common.FluentCard cardBancada;
+        private Label lblTituloBancada;
+        private Label lblDescBancada;
+        private DevSandbox.UI.Common.FluentButton btnAbrirBancada;
         private Panel panelFooter;
         private Label lblFooter;
     }
