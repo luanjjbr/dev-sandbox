@@ -85,6 +85,9 @@ A título de exemplo prático desta arquitetura, os seguintes utilitários já e
 * **🔢 Conversor de Bases Numéricas (Calculadora Hex)**:
   * Motor no `Core` (`CalculadoraHex`) com conversão bidirecional de 64 bits entre bases Hexadecimal, Decimal e Binário, suporte a separadores (`_`, `-`) e agrupamento de bits.
   * Interface em `UI` (`FormCalculadora`) com conversão rápida (Hex/Dec/Bin), detecção inteligente e botões de cópia rápida para a área de transferência.
+* **⚡ Emulador de Bancada EVSE (Modo 3 - IEC 61851-1 / IEC 62196-2)**:
+  * Motor no `Core` (`BancadaEngine`, `EstadoCaboPP`, `EstadoVeiculoCP`) para emulação dos resistores de cabo (PP) e dos estados veiculares de recarga (CP - Estados A, B, C, D e E).
+  * Interface em `UI` (`FormBancada`) com controles dedicados de seleção e Monitor Serial em tempo real para testes com hardware embarcado (Arduino).
 
 ---
 

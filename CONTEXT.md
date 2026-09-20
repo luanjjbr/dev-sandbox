@@ -32,17 +32,19 @@ dev-sandbox/
 ├── dist/                                # Executáveis e binários locais (gerados a cada build)
 ├── src/
 │   ├── DevSandbox.Core/                 # Biblioteca de Classes (net10.0 pura)
+│   │   ├── Bancada/                     # Emulador de cabo PP e estados de recarga CP (Modo 3)
 │   │   ├── Converters/                  # Algoritmos de conversão numérica
 │   │   ├── Pomodoro/                    # Motor de tempo e estados do Pomodoro
 │   │   └── Serial/                      # Motor de comunicação UART resiliente
 │   │
 │   └── DevSandbox.UI/                   # Executável WinForms (net10.0-windows)
 │       ├── Common/                      # Gerenciador de temas e estilização Win32/DWM
-│       ├── Forms/                       # Telas e janelas (MainHub, Pomodoro, Serial, Calc)
+│       ├── Forms/                       # Telas e janelas (MainHub, Pomodoro, Serial, Calc, Bancada)
 │       └── Program.cs                   # Ponto de entrada (STAThread)
 │
 └── tests/
     └── DevSandbox.Tests/                # Suíte de Testes Automatizados (NUnit)
+        ├── BancadaEngineTests.cs        # 16 testes de comandos seriais e estados PP/CP
         ├── CalculadoraHexTests.cs       # 13 testes de conversão e casos de borda
         ├── PomodoroEngineTests.cs       # 8 testes de ciclo assíncrono e eventos
         └── SupervisorioSerialEngineTests.cs # 7 testes de estabilidade e limites
@@ -102,7 +104,19 @@ dev-sandbox/
 
 ---
 
-### 3.4. 🎨 Sistema Visual Windows 11 Fluent Design (WinUI 3 Dark)
+### 3.4. ⚡ Emulador de Bancada EVSE (Modo 3 - IEC 61851-1 e IEC 62196-2)
+* **Core (`src/DevSandbox.Core/Bancada/`):**
+  * `EstadoCaboPP.cs`: Mapeamento das resistências no Pino de Proximidade (PP) entre PP e PE conforme IEC 62196-2 (Cabo 0 a 6: Circuito Aberto, 4700 Ω, 1500 Ω [13A], 680 Ω [20A], 220 Ω [32A], 100 Ω [63A], 47 Ω [Falha]). Extensões para obtenção de comandos seriais (`cabo X`).
+  * `EstadoVeiculoCP.cs`: Mapeamento dos estados do veículo no Pino Piloto de Controle (CP) conforme o nível de tensão da borda positiva do sinal PWM (Estado A: +12V [Desconectado], Estado B: +9V [Conectado], Estado C: +6V [Carregando], Estado D: +3V [Carregando c/ Ventilação], Estado E: 0V [Falha/Curto]). Extensões para comandos seriais (`estado X`).
+  * `BancadaEngine.cs`: Coordena o emulador, gerenciando conexão serial com watchdog de reconexão automática, controle de estados atuais e despacho de comandos seriais.
+* **UI (`src/DevSandbox.UI/Forms/FormBancada.cs`):**
+  * Interface desktop dividida em três colunas operacionais: Emulador do Cabo (PP), Emulador de Estados do Veículo (CP) e Monitor Serial com terminal de log e entrada de comandos manuais.
+* **Testes (`tests/DevSandbox.Tests/BancadaEngineTests.cs`):**
+  * 16 testes unitários validando a formatação dos comandos CLI, atualização de propriedades, notificação de eventos e tratamento de comandos manuais.
+
+---
+
+### 3.5. 🎨 Sistema Visual Windows 11 Fluent Design (WinUI 3 Dark)
 * **Tokens e Temas (`src/DevSandbox.UI/Common/ThemeManager.cs`):**
   * Integração com a API nativa `dwmapi.dll` (`DwmSetWindowAttribute`) ativando o modo escuro na barra de título do Windows 10/11.
   * Paleta oficial Windows 11 Fluent Dark: Fundo Mica `#202020`, Cards `#2B2B2B` com bordas `#383838`, e cor de acento Ciano/Azul Vibrante (`#4CC2FF`).
@@ -116,11 +130,11 @@ dev-sandbox/
 
 ---
 
-### 3.5. 🏠 Hub Central (`MainForm`)
+### 3.6. 🏠 Hub Central (`MainForm`)
 * **Arquivo:** `src/DevSandbox.UI/Forms/MainForm.cs`
 * **Recursos:**
   * Atua como painel de controle principal (Dashboard) para navegação entre as ferramentas.
-  * Cards visuais interativos com efeito hover e clique expandido.
+  * Cards visuais interativos com efeito hover e clique expandido (Supervisório, Pomodoro, Calculadora e Bancada EVSE).
   * Gerencia a exibição e retorno gracioso das janelas filhas com `ShowDialog()`.
 
 ---
@@ -168,7 +182,7 @@ dist/DevSandbox.UI.exe
 ```
 
 ### Gerar Executável Único para Enviar a Qualquer Pessoa (Single-File Standalone)
-Gera um único `.exe` de ~116 MB com o .NET 10 e tudo embutido. Quem receber esse arquivo não precisa instalar nada para rodar:
+Gera um único `.exe` de ~49 MB com o .NET 10 e tudo embutido. Quem receber esse arquivo não precisa instalar nada para rodar:
 ```powershell
 .\publish-standalone.ps1
 ```
@@ -176,11 +190,11 @@ Ou via CLI:
 ```powershell
 dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/standalone
 ```
-O arquivo gerado fica pronto em `dist/standalone/DevSandbox.UI.exe`.
+O arquivo gerado fica pronto em `dist/standalone/DevSandbox.UI.exe` e `app/DevSandbox.UI.exe`.
 
 ---
 
 ## 📊 6. Status Atual de Qualidade
-* **Testes Automatizados:** 28 testes passando (0 falhas).
+* **Testes Automatizados:** 44 testes passando (0 falhas).
 * **Compilação:** 0 erros, 0 avisos em .NET 10.0.
-* **Cobertura:** Todos os 3 motores do Core possuem testes unitários dedicados.
+* **Cobertura:** Todos os 4 motores do Core possuem testes unitários dedicados.
