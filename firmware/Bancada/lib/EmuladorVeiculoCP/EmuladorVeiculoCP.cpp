@@ -87,26 +87,28 @@ bool EmuladorVeiculoCP::ativarEstado(CodigoEstadoCP estado)
     // e por ser subconjunto dos dois estados não cria paralelo espúrio.
     const uint16_t mascaraIntermediaria = mascaraAtual & mascaraNova;
 
+    const bool algumReleSai    = (mascaraIntermediaria != mascaraAtual);
+    const bool algumReleEntra  = (mascaraNova != mascaraIntermediaria);
+
     // 1. BREAK: abre só os relés que saem
-    if (mascaraIntermediaria != mascaraAtual)
+    if (algumReleSai)
     {
         aplicarMascara(mascaraIntermediaria);
     }
 
-    // 2. Acomodação mecânica (só se ainda houver relés para fechar).
+    // 2. Acomodação mecânica: só quando algum relé SAIU (há contato abrindo) e
+    // algum vai ENTRAR (há o que proteger). Só fechar relés (ex.: AX -> BX,
+    // BX+ -> BX) ou só abrir (ex.: CX -> CX+, -> AX) não exige pausa.
     // ATENÇÃO: o chamador (processarComando) detém o xSerialMutex; esta pausa
     // roda DENTRO do mutex (até ~48 ms). Só a SerialCLI usa a Serial, e a
     // tarefaBlink não depende do mutex, então nenhuma task fica bloqueada.
-    if (mascaraNova != mascaraIntermediaria)
+    if (algumReleSai && algumReleEntra && _tempoBreakMs > 0U)
     {
-        if (_tempoBreakMs > 0U)
-        {
-            vTaskDelay(ticksDaPausa());
-        }
-
-        // 3. MAKE: fecha só os relés que entram
-        aplicarMascara(mascaraNova);
+        vTaskDelay(ticksDaPausa());
     }
+
+    // 3. MAKE: fecha só os relés que entram (idempotente se nada entra)
+    aplicarMascara(mascaraNova);
 
     _estadoAtual = estado;
     return true;

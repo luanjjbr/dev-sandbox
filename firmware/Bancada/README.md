@@ -72,7 +72,7 @@ Comandos sem diferença de maiúsculas/minúsculas e tolerantes a espaços. Linh
 - Respostas: `OK`; argumento inválido → `ERRO: Estado`; no Nano, qualquer `estado …` → `ERRO: CP indisponivel no Nano`.
 - `estado status` → `[STATUS CP] Estado: CX | Vcp: 6 V | <descrição> | Reles: S7 S9.1 S10.2 S11.1`.
 - S10.2 (D26) habilita o ramo C; **S10.1 (D27) habilita o ramo D e corresponde ao "S10.0" da Tabela II**.
-- **Troca de estado (*break-before-make*):** abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` (20 ms; ~32–48 ms reais com o tick de ~16 ms do FreeRTOS) e fecha só os que entram. O intermediário é a interseção dos dois estados: entre estados conectados ele sempre mantém S7 (nunca passa por AX) e nunca tem S8 nem os ramos C e D juntos, o que é provado por `static_assert` em `lib/EmuladorVeiculoCP/TabelaEstadosCP.cpp`. Repetir o estado atual é *no-op*.
+- **Troca de estado (*break-before-make*):** abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` (20 ms; ~32–48 ms reais com o tick de ~16 ms do FreeRTOS) e fecha só os que entram. A pausa só ocorre quando algum relé sai e outro entra; trocas que só fecham (ex.: AX → BX) ou só abrem (ex.: CX → CX+) são imediatas. O intermediário é a interseção dos dois estados: entre estados conectados ele sempre mantém S7 (nunca passa por AX) e nunca tem S8 nem os ramos C e D juntos, o que é provado por `static_assert` em `lib/EmuladorVeiculoCP/TabelaEstadosCP.cpp`. Reenviar o estado atual é *no-op*: o firmware não reescreve os relés. Para reaplicá-los (ex.: depois de um brown-out só no módulo de relés), mande `estado ax` e depois o estado desejado.
 - **Boot seguro:** todos os relés do CP e as chaves do PP são abertos no `setup()`, antes das tasks.
 
 ### Outros

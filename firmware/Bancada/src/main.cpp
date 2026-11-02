@@ -92,7 +92,13 @@ void exibirHelp()
     Serial.println(F("=================================================="));
 }
 
-// "debug stack": menor stack livre já observada (no AVR 1 word = 1 byte)
+// "debug stack": menor stack livre já observada (no AVR 1 word = 1 byte).
+// ATENÇÃO: no port AVR, uxTaskGetStackHighWaterMark devolve UBaseType_t de
+// 8 bits (máx. 255). Se algum stack passar de 255 words, troque por
+// uxTaskGetStackHighWaterMark2 (configSTACK_DEPTH_TYPE) para não truncar; ela
+// exige INCLUDE_uxTaskGetStackHighWaterMark2 = 1, que o FreeRTOSConfig.h do
+// feilipu não habilita. Hoje: SerialCLI 256 (Mega) / 128 (Nano); o valor
+// livre real fica abaixo de 255 porque a task sempre usa parte do stack.
 void imprimirStack()
 {
     Serial.print(F("[STACK] SerialCLI livre: "));
