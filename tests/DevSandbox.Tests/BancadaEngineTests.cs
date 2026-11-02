@@ -26,12 +26,12 @@ namespace DevSandbox.Tests
         }
 
         [Test]
-        public void EstadoInicial_DeveSerCircuitoAbertoEEstadoA()
+        public void EstadoInicial_DeveSerCircuitoAbertoEEstadoAX()
         {
             using var engine = new BancadaEngine();
 
             Assert.That(engine.CaboAtual, Is.EqualTo(EstadoCaboPP.CircuitoAberto));
-            Assert.That(engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.EstadoA));
+            Assert.That(engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.AX));
             Assert.That(engine.EstaConectado, Is.False);
         }
 
@@ -47,11 +47,11 @@ namespace DevSandbox.Tests
             Assert.That(cabo.ObterComandoSerial(), Is.EqualTo(comandoEsperado));
         }
 
-        [TestCase(EstadoVeiculoCP.EstadoA, "estado a")]
-        [TestCase(EstadoVeiculoCP.EstadoB, "estado b")]
-        [TestCase(EstadoVeiculoCP.EstadoC, "estado c")]
-        [TestCase(EstadoVeiculoCP.EstadoD, "estado d")]
-        [TestCase(EstadoVeiculoCP.EstadoE, "estado e")]
+        [TestCase(EstadoVeiculoCP.AX, "estado ax")]
+        [TestCase(EstadoVeiculoCP.BXNominal, "estado bx")]
+        [TestCase(EstadoVeiculoCP.CXNominal, "estado cx")]
+        [TestCase(EstadoVeiculoCP.DXNominal, "estado dx")]
+        [TestCase(EstadoVeiculoCP.E, "estado e")]
         public void ObterComandoSerial_Estado_DeveFormatarCorretamente(EstadoVeiculoCP estado, string comandoEsperado)
         {
             Assert.That(estado.ObterComandoSerial(), Is.EqualTo(comandoEsperado));
@@ -84,12 +84,12 @@ namespace DevSandbox.Tests
             _engine.EstadoVeiculoAlterado += (s, estado) => estadoNotificado = estado;
             _engine.ComandoEnviado += (s, cmd) => comandoNotificado = cmd;
 
-            bool enviado = _engine.DefinirEstado(EstadoVeiculoCP.EstadoC);
+            bool enviado = _engine.DefinirEstado(EstadoVeiculoCP.CXNominal);
 
             Assert.That(enviado, Is.True);
-            Assert.That(_engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.EstadoC));
-            Assert.That(estadoNotificado, Is.EqualTo(EstadoVeiculoCP.EstadoC));
-            Assert.That(comandoNotificado, Is.EqualTo("estado c"));
+            Assert.That(_engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.CXNominal));
+            Assert.That(estadoNotificado, Is.EqualTo(EstadoVeiculoCP.CXNominal));
+            Assert.That(comandoNotificado, Is.EqualTo("estado cx"));
         }
 
         [Test]
@@ -132,7 +132,7 @@ namespace DevSandbox.Tests
             _engine.ComandoEnviado += (s, cmd) => comandos++;
 
             Assert.That(_engine.EnviarComandoManual("help"), Is.False);
-            Assert.That(_engine.DefinirEstado(EstadoVeiculoCP.EstadoB), Is.False);
+            Assert.That(_engine.DefinirEstado(EstadoVeiculoCP.BXNominal), Is.False);
             Assert.That(comandos, Is.EqualTo(0));
         }
 

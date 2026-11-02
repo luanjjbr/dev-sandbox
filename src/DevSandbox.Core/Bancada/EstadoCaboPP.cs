@@ -17,10 +17,19 @@ namespace DevSandbox.Core.Bancada
 
     public static class EstadoCaboPPExtensions
     {
+        /// <summary>
+        /// Nota do canal 1: o 4700 Ω é um resistor da bancada física, não um valor da IEC 62196-2
+        /// (que codifica só 1500/680/220/100 Ω; desconectado na norma é circuito aberto).
+        /// </summary>
+        public const string NotaValorDaBancada = "valor da bancada, fora da tabela IEC 62196-2";
+
+        /// <summary><c>true</c> se o valor do canal não pertence à tabela da IEC 62196-2 (canal 1, 4700 Ω).</summary>
+        public static bool ForaDaNorma(this EstadoCaboPP cabo) => cabo == EstadoCaboPP.Desconectado;
+
         public static string ObterDescricao(this EstadoCaboPP cabo) => cabo switch
         {
             EstadoCaboPP.CircuitoAberto => "Circuito Aberto (Nenhum cabo)",
-            EstadoCaboPP.Desconectado   => "Desconectado (4700 Ω)",
+            EstadoCaboPP.Desconectado   => $"Desconectado (4700 Ω) - {NotaValorDaBancada}",
             EstadoCaboPP.Cabo13A        => "Cabo 13 A (1500 Ω)",
             EstadoCaboPP.Cabo20A        => "Cabo 20 A (680 Ω)",
             EstadoCaboPP.Cabo32A        => "Cabo 32 A (220 Ω)",

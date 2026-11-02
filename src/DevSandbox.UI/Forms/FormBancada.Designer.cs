@@ -46,6 +46,16 @@ namespace DevSandbox.UI.Forms
             rbCPC = new RadioButton();
             rbCPB = new RadioButton();
             rbCPA = new RadioButton();
+            pnlVariacaoCP = new Panel();
+            lblTituloVariacao = new Label();
+            btnVarSup = new DevSandbox.UI.Common.FluentButton();
+            btnVarNom = new DevSandbox.UI.Common.FluentButton();
+            btnVarInf = new DevSandbox.UI.Common.FluentButton();
+            lblTensaoEsperada = new Label();
+            lblFirmwareCP = new Label();
+            btnStatusCP = new DevSandbox.UI.Common.FluentButton();
+            lblNotaPP = new Label();
+            lblFirmwarePP = new Label();
             cardTerminal = new DevSandbox.UI.Common.FluentCard();
             btnLimpar = new DevSandbox.UI.Common.FluentButton();
             btnEnviar = new DevSandbox.UI.Common.FluentButton();
@@ -57,6 +67,7 @@ namespace DevSandbox.UI.Forms
             cardConexao.SuspendLayout();
             cardCaboPP.SuspendLayout();
             cardVeiculoCP.SuspendLayout();
+            pnlVariacaoCP.SuspendLayout();
             cardTerminal.SuspendLayout();
             panelFooter.SuspendLayout();
             SuspendLayout();
@@ -103,7 +114,7 @@ namespace DevSandbox.UI.Forms
             btnConectar.Location = new Point(340, 24);
             btnConectar.Name = "btnConectar";
             btnConectar.Size = new Size(110, 32);
-            btnConectar.TabIndex = 5;
+            btnConectar.TabIndex = 3;
             btnConectar.Text = "Conectar";
             btnConectar.Click += btnConectar_Click;
             // 
@@ -115,7 +126,7 @@ namespace DevSandbox.UI.Forms
             cboBaudRate.Location = new Point(220, 29);
             cboBaudRate.Name = "cboBaudRate";
             cboBaudRate.Size = new Size(100, 23);
-            cboBaudRate.TabIndex = 4;
+            cboBaudRate.TabIndex = 2;
             // 
             // lblBaudRate
             // 
@@ -125,7 +136,7 @@ namespace DevSandbox.UI.Forms
             lblBaudRate.Location = new Point(220, 11);
             lblBaudRate.Name = "lblBaudRate";
             lblBaudRate.Size = new Size(67, 15);
-            lblBaudRate.TabIndex = 3;
+            lblBaudRate.TabIndex = 5;
             lblBaudRate.Text = "BAUD RATE";
             // 
             // btnAtualizarPortas
@@ -135,7 +146,7 @@ namespace DevSandbox.UI.Forms
             btnAtualizarPortas.Location = new Point(170, 27);
             btnAtualizarPortas.Name = "btnAtualizarPortas";
             btnAtualizarPortas.Size = new Size(34, 27);
-            btnAtualizarPortas.TabIndex = 2;
+            btnAtualizarPortas.TabIndex = 1;
             btnAtualizarPortas.Text = "🔄";
             btnAtualizarPortas.Click += btnAtualizarPortas_Click;
             // 
@@ -147,7 +158,7 @@ namespace DevSandbox.UI.Forms
             cboPortas.Location = new Point(16, 29);
             cboPortas.Name = "cboPortas";
             cboPortas.Size = new Size(148, 23);
-            cboPortas.TabIndex = 1;
+            cboPortas.TabIndex = 0;
             // 
             // lblPortas
             // 
@@ -157,11 +168,13 @@ namespace DevSandbox.UI.Forms
             lblPortas.Location = new Point(16, 11);
             lblPortas.Name = "lblPortas";
             lblPortas.Size = new Size(77, 15);
-            lblPortas.TabIndex = 0;
+            lblPortas.TabIndex = 4;
             lblPortas.Text = "PORTA SERIAL";
             // 
             // cardCaboPP
             // 
+            cardCaboPP.Controls.Add(lblFirmwarePP);
+            cardCaboPP.Controls.Add(lblNotaPP);
             cardCaboPP.Controls.Add(lblStatusCabo);
             cardCaboPP.Controls.Add(lblSubtituloPP);
             cardCaboPP.Controls.Add(lblTituloPP);
@@ -179,14 +192,34 @@ namespace DevSandbox.UI.Forms
             // 
             // lblStatusCabo
             // 
-            lblStatusCabo.Font = new Font("Segoe UI", 8.5F);
+            lblStatusCabo.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
             lblStatusCabo.ForeColor = Color.FromArgb(76, 194, 255);
-            lblStatusCabo.Location = new Point(16, 375);
+            lblStatusCabo.Location = new Point(16, 362);
             lblStatusCabo.Name = "lblStatusCabo";
-            lblStatusCabo.Size = new Size(224, 30);
+            lblStatusCabo.Size = new Size(224, 32);
             lblStatusCabo.TabIndex = 9;
             lblStatusCabo.Text = "Ativo: Circuito Aberto (∞ Ω)";
             // 
+            // lblNotaPP
+            //
+            lblNotaPP.Font = new Font("Segoe UI", 7.5F, FontStyle.Italic);
+            lblNotaPP.ForeColor = Color.FromArgb(160, 160, 160);
+            lblNotaPP.Location = new Point(18, 332);
+            lblNotaPP.Name = "lblNotaPP";
+            lblNotaPP.Size = new Size(220, 26);
+            lblNotaPP.TabIndex = 10;
+            lblNotaPP.Text = "* Valor da bancada, fora da tabela IEC 62196-2";
+            //
+            // lblFirmwarePP
+            //
+            lblFirmwarePP.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            lblFirmwarePP.ForeColor = Color.FromArgb(160, 160, 160);
+            lblFirmwarePP.Location = new Point(16, 396);
+            lblFirmwarePP.Name = "lblFirmwarePP";
+            lblFirmwarePP.Size = new Size(224, 18);
+            lblFirmwarePP.TabIndex = 11;
+            lblFirmwarePP.Text = "Firmware: —";
+            //
             // lblSubtituloPP
             // 
             lblSubtituloPP.AutoSize = true;
@@ -289,7 +322,7 @@ namespace DevSandbox.UI.Forms
             rbPP1.Size = new Size(183, 19);
             rbPP1.TabIndex = 1;
             rbPP1.TabStop = true;
-            rbPP1.Text = "1: Desconectado (4700 Ω)";
+            rbPP1.Text = "1: Desconectado (4700 Ω) *";
             rbPP1.UseVisualStyleBackColor = true;
             rbPP1.CheckedChanged += rbPP_CheckedChanged;
             // 
@@ -310,6 +343,10 @@ namespace DevSandbox.UI.Forms
             // 
             // cardVeiculoCP
             // 
+            cardVeiculoCP.Controls.Add(btnStatusCP);
+            cardVeiculoCP.Controls.Add(lblFirmwareCP);
+            cardVeiculoCP.Controls.Add(lblTensaoEsperada);
+            cardVeiculoCP.Controls.Add(pnlVariacaoCP);
             cardVeiculoCP.Controls.Add(lblStatusVeiculo);
             cardVeiculoCP.Controls.Add(lblSubtituloCP);
             cardVeiculoCP.Controls.Add(lblTituloCP);
@@ -325,13 +362,99 @@ namespace DevSandbox.UI.Forms
             // 
             // lblStatusVeiculo
             // 
-            lblStatusVeiculo.Font = new Font("Segoe UI", 8.5F);
+            lblStatusVeiculo.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
             lblStatusVeiculo.ForeColor = Color.FromArgb(76, 194, 255);
-            lblStatusVeiculo.Location = new Point(16, 375);
+            lblStatusVeiculo.Location = new Point(16, 294);
             lblStatusVeiculo.Name = "lblStatusVeiculo";
-            lblStatusVeiculo.Size = new Size(224, 30);
-            lblStatusVeiculo.TabIndex = 7;
-            lblStatusVeiculo.Text = "Ativo: Estado A (+12V)";
+            lblStatusVeiculo.Size = new Size(224, 48);
+            lblStatusVeiculo.TabIndex = 10;
+            lblStatusVeiculo.Text = "Ativo: AX";
+            //
+            // pnlVariacaoCP
+            //
+            pnlVariacaoCP.BackColor = Color.Transparent;
+            pnlVariacaoCP.Controls.Add(lblTituloVariacao);
+            pnlVariacaoCP.Controls.Add(btnVarInf);
+            pnlVariacaoCP.Controls.Add(btnVarNom);
+            pnlVariacaoCP.Controls.Add(btnVarSup);
+            pnlVariacaoCP.Location = new Point(14, 222);
+            pnlVariacaoCP.Name = "pnlVariacaoCP";
+            pnlVariacaoCP.Size = new Size(228, 64);
+            pnlVariacaoCP.TabIndex = 5;
+            //
+            // lblTituloVariacao
+            //
+            lblTituloVariacao.AutoSize = true;
+            lblTituloVariacao.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            lblTituloVariacao.ForeColor = Color.FromArgb(160, 160, 160);
+            lblTituloVariacao.Location = new Point(4, 2);
+            lblTituloVariacao.Name = "lblTituloVariacao";
+            lblTituloVariacao.TabIndex = 3;
+            lblTituloVariacao.Text = "TOLERÂNCIA (ESTADOS B, C, D):";
+            //
+            // btnVarSup
+            //
+            btnVarSup.CornerRadius = 4;
+            btnVarSup.Font = new Font("Segoe UI", 8F);
+            btnVarSup.Location = new Point(4, 24);
+            btnVarSup.Name = "btnVarSup";
+            btnVarSup.Size = new Size(68, 30);
+            btnVarSup.TabIndex = 0;
+            btnVarSup.Text = "+ Sup";
+            btnVarSup.Click += btnVariacao_Click;
+            //
+            // btnVarNom
+            //
+            btnVarNom.CornerRadius = 4;
+            btnVarNom.Font = new Font("Segoe UI", 8F);
+            btnVarNom.Location = new Point(76, 24);
+            btnVarNom.Name = "btnVarNom";
+            btnVarNom.Size = new Size(74, 30);
+            btnVarNom.TabIndex = 1;
+            btnVarNom.Text = "Nominal";
+            btnVarNom.Click += btnVariacao_Click;
+            //
+            // btnVarInf
+            //
+            btnVarInf.CornerRadius = 4;
+            btnVarInf.Font = new Font("Segoe UI", 8F);
+            btnVarInf.Location = new Point(154, 24);
+            btnVarInf.Name = "btnVarInf";
+            btnVarInf.Size = new Size(68, 30);
+            btnVarInf.TabIndex = 2;
+            btnVarInf.Text = "− Inf";
+            btnVarInf.Click += btnVariacao_Click;
+            //
+            // lblTensaoEsperada
+            //
+            lblTensaoEsperada.Font = new Font("Segoe UI", 8F);
+            lblTensaoEsperada.ForeColor = Color.FromArgb(160, 160, 160);
+            lblTensaoEsperada.Location = new Point(16, 344);
+            lblTensaoEsperada.Name = "lblTensaoEsperada";
+            lblTensaoEsperada.Size = new Size(224, 18);
+            lblTensaoEsperada.TabIndex = 11;
+            lblTensaoEsperada.Text = "Tensão nominal: +12 V";
+            //
+            // lblFirmwareCP
+            //
+            lblFirmwareCP.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            lblFirmwareCP.ForeColor = Color.FromArgb(160, 160, 160);
+            lblFirmwareCP.Location = new Point(16, 366);
+            lblFirmwareCP.Name = "lblFirmwareCP";
+            lblFirmwareCP.Size = new Size(152, 44);
+            lblFirmwareCP.TabIndex = 12;
+            lblFirmwareCP.Text = "Firmware: —";
+            //
+            // btnStatusCP
+            //
+            btnStatusCP.CornerRadius = 4;
+            btnStatusCP.Font = new Font("Segoe UI", 8.5F);
+            btnStatusCP.Location = new Point(172, 370);
+            btnStatusCP.Name = "btnStatusCP";
+            btnStatusCP.Size = new Size(70, 28);
+            btnStatusCP.TabIndex = 6;
+            btnStatusCP.Text = "Status";
+            btnStatusCP.Click += btnStatusCP_Click;
             // 
             // lblSubtituloCP
             // 
@@ -341,7 +464,7 @@ namespace DevSandbox.UI.Forms
             lblSubtituloCP.Location = new Point(16, 36);
             lblSubtituloCP.Name = "lblSubtituloCP";
             lblSubtituloCP.Size = new Size(149, 13);
-            lblSubtituloCP.TabIndex = 6;
+            lblSubtituloCP.TabIndex = 9;
             lblSubtituloCP.Text = "Tensão PWM (IEC 61851-1)";
             // 
             // lblTituloCP
@@ -352,7 +475,7 @@ namespace DevSandbox.UI.Forms
             lblTituloCP.Location = new Point(14, 14);
             lblTituloCP.Name = "lblTituloCP";
             lblTituloCP.Size = new Size(189, 19);
-            lblTituloCP.TabIndex = 5;
+            lblTituloCP.TabIndex = 8;
             lblTituloCP.Text = "🚗 Emulador de Veículo (CP)";
             // 
             // rbCPE
@@ -360,12 +483,12 @@ namespace DevSandbox.UI.Forms
             rbCPE.AutoSize = true;
             rbCPE.Font = new Font("Segoe UI", 9F);
             rbCPE.ForeColor = Color.FromArgb(239, 68, 68);
-            rbCPE.Location = new Point(18, 228);
+            rbCPE.Location = new Point(18, 182);
             rbCPE.Name = "rbCPE";
             rbCPE.Size = new Size(198, 19);
             rbCPE.TabIndex = 4;
             rbCPE.TabStop = true;
-            rbCPE.Text = "Estado E (0V) - Falha / Curto";
+            rbCPE.Text = "E: Falha / Curto (+1 V)";
             rbCPE.UseVisualStyleBackColor = true;
             rbCPE.CheckedChanged += rbCP_CheckedChanged;
             // 
@@ -374,12 +497,12 @@ namespace DevSandbox.UI.Forms
             rbCPD.AutoSize = true;
             rbCPD.Font = new Font("Segoe UI", 9F);
             rbCPD.ForeColor = Color.FromArgb(255, 255, 255);
-            rbCPD.Location = new Point(18, 188);
+            rbCPD.Location = new Point(18, 152);
             rbCPD.Name = "rbCPD";
             rbCPD.Size = new Size(207, 19);
             rbCPD.TabIndex = 3;
             rbCPD.TabStop = true;
-            rbCPD.Text = "Estado D (+3V) - C/ Ventilação";
+            rbCPD.Text = "D: Carga c/ ventilação (+3 V)";
             rbCPD.UseVisualStyleBackColor = true;
             rbCPD.CheckedChanged += rbCP_CheckedChanged;
             // 
@@ -388,12 +511,12 @@ namespace DevSandbox.UI.Forms
             rbCPC.AutoSize = true;
             rbCPC.Font = new Font("Segoe UI", 9F);
             rbCPC.ForeColor = Color.FromArgb(255, 255, 255);
-            rbCPC.Location = new Point(18, 148);
+            rbCPC.Location = new Point(18, 122);
             rbCPC.Name = "rbCPC";
             rbCPC.Size = new Size(198, 19);
             rbCPC.TabIndex = 2;
             rbCPC.TabStop = true;
-            rbCPC.Text = "Estado C (+6V) - Carregando";
+            rbCPC.Text = "C: Carga normal (+6 V)";
             rbCPC.UseVisualStyleBackColor = true;
             rbCPC.CheckedChanged += rbCP_CheckedChanged;
             // 
@@ -402,12 +525,12 @@ namespace DevSandbox.UI.Forms
             rbCPB.AutoSize = true;
             rbCPB.Font = new Font("Segoe UI", 9F);
             rbCPB.ForeColor = Color.FromArgb(255, 255, 255);
-            rbCPB.Location = new Point(18, 108);
+            rbCPB.Location = new Point(18, 92);
             rbCPB.Name = "rbCPB";
             rbCPB.Size = new Size(195, 19);
             rbCPB.TabIndex = 1;
             rbCPB.TabStop = true;
-            rbCPB.Text = "Estado B (+9V) - Conectado";
+            rbCPB.Text = "B: Conectado / Standby (+9 V)";
             rbCPB.UseVisualStyleBackColor = true;
             rbCPB.CheckedChanged += rbCP_CheckedChanged;
             // 
@@ -417,12 +540,12 @@ namespace DevSandbox.UI.Forms
             rbCPA.Checked = true;
             rbCPA.Font = new Font("Segoe UI", 9F);
             rbCPA.ForeColor = Color.FromArgb(255, 255, 255);
-            rbCPA.Location = new Point(18, 68);
+            rbCPA.Location = new Point(18, 62);
             rbCPA.Name = "rbCPA";
             rbCPA.Size = new Size(207, 19);
             rbCPA.TabIndex = 0;
             rbCPA.TabStop = true;
-            rbCPA.Text = "Estado A (+12V) - Desconectado";
+            rbCPA.Text = "A: Desconectado (+12 V)";
             rbCPA.UseVisualStyleBackColor = true;
             rbCPA.CheckedChanged += rbCP_CheckedChanged;
             // 
@@ -445,7 +568,7 @@ namespace DevSandbox.UI.Forms
             btnLimpar.Location = new Point(207, 375);
             btnLimpar.Name = "btnLimpar";
             btnLimpar.Size = new Size(55, 28);
-            btnLimpar.TabIndex = 4;
+            btnLimpar.TabIndex = 3;
             btnLimpar.Text = "Limpar";
             btnLimpar.Click += btnLimpar_Click;
             // 
@@ -457,7 +580,7 @@ namespace DevSandbox.UI.Forms
             btnEnviar.Location = new Point(148, 375);
             btnEnviar.Name = "btnEnviar";
             btnEnviar.Size = new Size(54, 28);
-            btnEnviar.TabIndex = 3;
+            btnEnviar.TabIndex = 2;
             btnEnviar.Text = "Enviar";
             btnEnviar.Click += btnEnviar_Click;
             // 
@@ -471,7 +594,7 @@ namespace DevSandbox.UI.Forms
             txtComando.Name = "txtComando";
             txtComando.PlaceholderText = "Comando...";
             txtComando.Size = new Size(128, 23);
-            txtComando.TabIndex = 2;
+            txtComando.TabIndex = 1;
             txtComando.KeyDown += txtComando_KeyDown;
             // 
             // txtTerminal
@@ -486,7 +609,7 @@ namespace DevSandbox.UI.Forms
             txtTerminal.ReadOnly = true;
             txtTerminal.ScrollBars = ScrollBars.Vertical;
             txtTerminal.Size = new Size(248, 325);
-            txtTerminal.TabIndex = 1;
+            txtTerminal.TabIndex = 0;
             // 
             // lblTituloTerminal
             // 
@@ -496,7 +619,7 @@ namespace DevSandbox.UI.Forms
             lblTituloTerminal.Location = new Point(14, 14);
             lblTituloTerminal.Name = "lblTituloTerminal";
             lblTituloTerminal.Size = new Size(128, 19);
-            lblTituloTerminal.TabIndex = 0;
+            lblTituloTerminal.TabIndex = 4;
             lblTituloTerminal.Text = "📟 Monitor Serial";
             // 
             // panelFooter
@@ -539,6 +662,8 @@ namespace DevSandbox.UI.Forms
             cardConexao.PerformLayout();
             cardCaboPP.ResumeLayout(false);
             cardCaboPP.PerformLayout();
+            pnlVariacaoCP.ResumeLayout(false);
+            pnlVariacaoCP.PerformLayout();
             cardVeiculoCP.ResumeLayout(false);
             cardVeiculoCP.PerformLayout();
             cardTerminal.ResumeLayout(false);
@@ -579,6 +704,16 @@ namespace DevSandbox.UI.Forms
         private RadioButton rbCPD;
         private RadioButton rbCPE;
         private Label lblStatusVeiculo;
+        private Panel pnlVariacaoCP;
+        private Label lblTituloVariacao;
+        private DevSandbox.UI.Common.FluentButton btnVarSup;
+        private DevSandbox.UI.Common.FluentButton btnVarNom;
+        private DevSandbox.UI.Common.FluentButton btnVarInf;
+        private Label lblTensaoEsperada;
+        private Label lblFirmwareCP;
+        private DevSandbox.UI.Common.FluentButton btnStatusCP;
+        private Label lblNotaPP;
+        private Label lblFirmwarePP;
         private DevSandbox.UI.Common.FluentCard cardTerminal;
         private Label lblTituloTerminal;
         private TextBox txtTerminal;
