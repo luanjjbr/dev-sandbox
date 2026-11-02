@@ -33,9 +33,15 @@
     #define PINO_LED_STATUS 13
 #endif
 
-// Tamanho padrão de stack para tarefas em microcontroladores AVR (em words)
+// Tamanho padrão de stack para tarefas em microcontroladores AVR (em words;
+// no port AVR StackType_t = uint8_t, logo words = bytes)
 #define STACK_BLINK 128
-#define STACK_CABO  128
+#if defined(PLACA_MEGA) || defined(__AVR_ATmega2560__)
+    // Mega (8 KB SRAM): folga extra para o parser + status do CP na SerialCLI
+    #define STACK_CABO  256
+#else
+    #define STACK_CABO  128
+#endif
 
 // ============================================================================
 // 3. PINOS DO EMULADOR DE CABO - PINO PP (IEC 62196-2)
@@ -71,6 +77,12 @@
     #define PINO_CP_S12_1   30   // S12.1: Bypass 178R -> 270R (Estado DX Nominal, 3V)
     #define PINO_CP_S12_2   31   // S12.2: Bypass 178R+130R -> 140R (Estado DX Limite Inf, 2V)
 #endif
+
+// Break-before-make do CP: pausa mínima (ms) entre abrir os relés que saem e
+// fechar os que entram (acomodação mecânica dos contatos). Definido pelo
+// usuário em 2026-11-02. Com o tick de ~16 ms do FreeRTOS no AVR, a pausa real
+// fica em 32..48 ms (ver EmuladorVeiculoCP::ticksDaPausa).
+#define TEMPO_BREAK_BEFORE_MAKE_CP_MS  20
 
 #endif // CONFIG_HARDWARE_H
 

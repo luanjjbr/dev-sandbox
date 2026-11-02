@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='utf-8'?>
+<circuit version="1.1.0-SR2" rev="260312" stepSize="1000000" stepsPS="1000000" NLsteps="100000" reaStep="1000000" animate="1">
+  <item itemtype="Subcircuit" CircId="Mega-1" mainComp="false" Show_id="true" Show_Val="false" Pos="-150,-100" rotation="0" hflip="1" vflip="1" label="Arduino Mega" idLabPos="40,-20" labelrot="0" valLabPos="0,0" valLabRot="0" Logic_Symbol="false">
+    <mainCompProps MainCompId="mega2560-63" Frequency="16 MHz" Program="../../firmware/Bancada/.pio/build/megaatmega2560/firmware.hex" Auto_Load="true" saveEepr="true" MainMcu="true" SerialMon="-1" />
+  </item>
+  <item itemtype="SerialPort" CircId="SerialPort-1" mainComp="false" Show_id="true" Show_Val="false" Pos="-150,-240" rotation="0" hflip="1" vflip="1" label="BRIDGE_COM1" idLabPos="-20,-32" labelrot="0" valLabPos="-16,20" valLabRot="0" Auto="true" Port="COM1" Baudrate="9600 _Bd" DataBits="8 _bits" StopBits="1 _bits" SerialMon="false" />
+  <item itemtype="Connector" uid="Connector-UART-RX" startpinid="Mega-1-0" endpinid="SerialPort-1-pin0" pointList="-142,-80,-142,-220" />
+  <item itemtype="Connector" uid="Connector-UART-TX" startpinid="Mega-1-1" endpinid="SerialPort-1-pin1" pointList="-134,-80,-134,-220" />
+  <item itemtype="Ground" CircId="Ground-PE" mainComp="false" Show_id="true" Show_Val="false" Pos="-150,220" rotation="0" hflip="1" vflip="1" label="PE (Ground)" idLabPos="-20,15" labelrot="0" valLabPos="0,0" valLabRot="0" />
+  <item itemtype="Connector" uid="Connector-Mega-GND" startpinid="Mega-1-GND0" endpinid="Ground-PE-Gnd" pointList="-142,50,-142,204,-150,204" />
+  <item itemtype="Led" CircId="Led-Heartbeat" mainComp="false" Show_id="true" Show_Val="false" Pos="-80,-50" rotation="0" hflip="1" vflip="1" label="Heartbeat (D13)" idLabPos="10,-10" labelrot="0" valLabPos="0,0" valLabRot="0" Color="Green" Grounded="true" Threshold="2.0 V" MaxCurrent="0.03 A" Resistance="150 Ω" />
+  <item itemtype="Connector" uid="Connector-D13-HB" startpinid="Mega-1-13" endpinid="Led-Heartbeat-aPin" pointList="-110,-50,-96,-50" />
+  <item itemtype="LedBar" CircId="LedBar-PP" mainComp="false" Show_id="true" Show_Val="false" Pos="-420,-140" rotation="-90" hflip="1" vflip="1" label="PP_STATUS (D4..D9)" idLabPos="-20,-30" labelrot="0" valLabPos="0,0" valLabRot="0" Color="Yellow" Size="8 _Leds" Grounded="true" Threshold="2.2 V" MaxCurrent="0.03 A" Resistance="150 Ω" />
+  <item itemtype="Fixed Voltage" CircId="Fixed-Volt-PP-5V" mainComp="false" Show_id="true" Show_Val="true" Pos="-550,-240" rotation="0" hflip="1" vflip="1" label="EVSE +5V PP" idLabPos="-40,-25" labelrot="0" valLabPos="-16,8" valLabRot="0" Voltage="5 V" Out="false" />
+  <item itemtype="Resistor" CircId="Resistor-PU-470R" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-500,-240" rotation="0" hflip="1" vflip="1" label="R_PU (470R)" idLabPos="-20,-20" labelrot="0" valLabPos="-10,10" valLabRot="0" Resistance="470 Ω" />
+  <item itemtype="Connector" uid="Connector-PP-PU-5V" startpinid="Fixed-Volt-PP-5V-outnod" endpinid="Resistor-PU-470R-lPin" pointList="-534,-240,-516,-240" />
+  <item itemtype="Probe" CircId="Probe-V-PP" mainComp="false" Show_id="true" Show_Val="true" Pos="-420,-240" rotation="-45" hflip="1" vflip="1" label="V_PP (IEC 62196)" idLabPos="16,-16" labelrot="45" valLabPos="15,-10" valLabRot="0" ShowVolt="true" Threshold="2.5 V" />
+  <item itemtype="Connector" uid="Connector-PP-Probe" startpinid="Resistor-PU-470R-rPin" endpinid="Probe-V-PP-inpin" pointList="-484,-240,-420,-240" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S1" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,-180" rotation="0" hflip="1" vflip="1" label="Q_1 (S1)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S1" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,-180" rotation="0" hflip="1" vflip="1" label="R_S1" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="4700 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S1" startpinid="Mega-1-4" endpinid="Mosfet-PP-S1-Gate" pointList="-176,-180,-376,-180" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S1" startpinid="Mosfet-PP-S1-Dren" endpinid="Resistor-PP-S1-rPin" pointList="-352,-196,-424,-180" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S1" startpinid="Resistor-PP-S1-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,-180,-480,-180,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S1" startpinid="Mosfet-PP-S1-Sour" endpinid="Ground-PE-Gnd" pointList="-352,-164,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S1" startpinid="Mega-1-4" endpinid="LedBar-PP-led0-pinP" pointList="-176,-180,-420,-180" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S2" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,-140" rotation="0" hflip="1" vflip="1" label="Q_2 (S2)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S2" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,-140" rotation="0" hflip="1" vflip="1" label="R_S2" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="1500 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S2" startpinid="Mega-1-5" endpinid="Mosfet-PP-S2-Gate" pointList="-176,-140,-376,-140" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S2" startpinid="Mosfet-PP-S2-Dren" endpinid="Resistor-PP-S2-rPin" pointList="-352,-156,-424,-140" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S2" startpinid="Resistor-PP-S2-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,-140,-480,-140,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S2" startpinid="Mosfet-PP-S2-Sour" endpinid="Ground-PE-Gnd" pointList="-352,-124,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S2" startpinid="Mega-1-5" endpinid="LedBar-PP-led1-pinP" pointList="-176,-140,-420,-140" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S3" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,-100" rotation="0" hflip="1" vflip="1" label="Q_3 (S3)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S3" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,-100" rotation="0" hflip="1" vflip="1" label="R_S3" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="680 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S3" startpinid="Mega-1-6" endpinid="Mosfet-PP-S3-Gate" pointList="-176,-100,-376,-100" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S3" startpinid="Mosfet-PP-S3-Dren" endpinid="Resistor-PP-S3-rPin" pointList="-352,-116,-424,-100" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S3" startpinid="Resistor-PP-S3-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,-100,-480,-100,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S3" startpinid="Mosfet-PP-S3-Sour" endpinid="Ground-PE-Gnd" pointList="-352,-84,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S3" startpinid="Mega-1-6" endpinid="LedBar-PP-led2-pinP" pointList="-176,-100,-420,-100" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S4" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,-60" rotation="0" hflip="1" vflip="1" label="Q_4 (S4)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S4" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,-60" rotation="0" hflip="1" vflip="1" label="R_S4" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="220 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S4" startpinid="Mega-1-7" endpinid="Mosfet-PP-S4-Gate" pointList="-176,-60,-376,-60" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S4" startpinid="Mosfet-PP-S4-Dren" endpinid="Resistor-PP-S4-rPin" pointList="-352,-76,-424,-60" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S4" startpinid="Resistor-PP-S4-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,-60,-480,-60,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S4" startpinid="Mosfet-PP-S4-Sour" endpinid="Ground-PE-Gnd" pointList="-352,-44,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S4" startpinid="Mega-1-7" endpinid="LedBar-PP-led3-pinP" pointList="-176,-60,-420,-60" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S5" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,-20" rotation="0" hflip="1" vflip="1" label="Q_5 (S5)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S5" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,-20" rotation="0" hflip="1" vflip="1" label="R_S5" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S5" startpinid="Mega-1-8" endpinid="Mosfet-PP-S5-Gate" pointList="-176,-20,-376,-20" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S5" startpinid="Mosfet-PP-S5-Dren" endpinid="Resistor-PP-S5-rPin" pointList="-352,-36,-424,-20" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S5" startpinid="Resistor-PP-S5-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,-20,-480,-20,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S5" startpinid="Mosfet-PP-S5-Sour" endpinid="Ground-PE-Gnd" pointList="-352,-4,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S5" startpinid="Mega-1-8" endpinid="LedBar-PP-led4-pinP" pointList="-176,-20,-420,-20" />
+  <item itemtype="Mosfet" CircId="Mosfet-PP-S6" mainComp="false" Show_id="true" Show_Val="false" Pos="-360,20" rotation="0" hflip="1" vflip="1" label="Q_6 (S6)" idLabPos="-40,-15" labelrot="0" valLabPos="0,0" valLabRot="0" P_Channel="false" Depletion="false" RDSon="1 Ω" Threshold="2.0 V" />
+  <item itemtype="Resistor" CircId="Resistor-PP-S6" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="-440,20" rotation="0" hflip="1" vflip="1" label="R_S6" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="47 Ω" />
+  <item itemtype="Connector" uid="Conn-Gate-PP-S6" startpinid="Mega-1-9" endpinid="Mosfet-PP-S6-Gate" pointList="-176,20,-376,20" />
+  <item itemtype="Connector" uid="Conn-Dren-PP-S6" startpinid="Mosfet-PP-S6-Dren" endpinid="Resistor-PP-S6-rPin" pointList="-352,4,-424,20" />
+  <item itemtype="Connector" uid="Conn-Bus-PP-S6" startpinid="Resistor-PP-S6-lPin" endpinid="Probe-V-PP-inpin" pointList="-456,20,-480,20,-480,-240,-420,-240" />
+  <item itemtype="Connector" uid="Conn-Sour-PP-S6" startpinid="Mosfet-PP-S6-Sour" endpinid="Ground-PE-Gnd" pointList="-352,36,-352,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-PP-S6" startpinid="Mega-1-9" endpinid="LedBar-PP-led5-pinP" pointList="-176,20,-420,20" />
+  <item itemtype="Fixed Voltage" CircId="Fixed-Volt-CP-12V" mainComp="false" Show_id="true" Show_Val="true" Pos="250,-240" rotation="0" hflip="1" vflip="1" label="EVSE +12V CP" idLabPos="-40,-25" labelrot="0" valLabPos="-16,8" valLabRot="0" Voltage="12 V" Out="false" />
+  <item itemtype="Resistor" CircId="Resistor-CP-R1-1k" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="320,-240" rotation="0" hflip="1" vflip="1" label="R1 (1000R)" idLabPos="-20,-20" labelrot="0" valLabPos="-10,10" valLabRot="0" Resistance="1000 Ω" />
+  <item itemtype="Connector" uid="Connector-CP-R1-12V" startpinid="Fixed-Volt-CP-12V-outnod" endpinid="Resistor-CP-R1-1k-lPin" pointList="266,-240,304,-240" />
+  <item itemtype="Probe" CircId="Probe-V-CP" mainComp="false" Show_id="true" Show_Val="true" Pos="420,-240" rotation="-45" hflip="1" vflip="1" label="V_CP (IEC 61851)" idLabPos="16,-16" labelrot="45" valLabPos="15,-10" valLabRot="0" ShowVolt="true" Threshold="2.5 V" />
+  <item itemtype="Connector" uid="Connector-CP-Probe" startpinid="Resistor-CP-R1-1k-rPin" endpinid="Probe-V-CP-inpin" pointList="336,-240,420,-240" />
+  <item itemtype="Diode" CircId="Diode-CP-1N4148" mainComp="false" Show_id="true" Show_Val="false" Pos="480,-240" rotation="0" hflip="1" vflip="1" label="D_VEH (1N4148)" idLabPos="-20,-20" labelrot="0" valLabPos="0,0" valLabRot="0" Threshold="0.7 V" Resistance="0.1 Ω" />
+  <item itemtype="Connector" uid="Connector-CP-Probe-Diode" startpinid="Probe-V-CP-inpin" endpinid="Diode-CP-1N4148-lPin" pointList="420,-240,464,-240" />
+  <item itemtype="LedBar" CircId="LedBar-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="100,-150" rotation="-90" hflip="1" vflip="1" label="CP_RELAYS (D22..D31)" idLabPos="-20,-30" labelrot="0" valLabPos="0,0" valLabRot="0" Color="Yellow" Size="10 _Leds" Grounded="true" Threshold="2.2 V" MaxCurrent="0.03 A" Resistance="150 Ω" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S7" mainComp="false" Show_id="true" Show_Val="false" Pos="280,180" rotation="0" hflip="1" vflip="1" label="S7" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S7" startpinid="Mega-1-22" endpinid="Relay-CP-S7-inductor-lPin" pointList="-80,180,264,180" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S7" startpinid="Relay-CP-S7-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,180,304,180,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S7" startpinid="Mega-1-22" endpinid="LedBar-CP-led0-pinP" pointList="-80,180,100,180" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S8" mainComp="false" Show_id="true" Show_Val="false" Pos="280,140" rotation="0" hflip="1" vflip="1" label="S8" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S8" startpinid="Mega-1-23" endpinid="Relay-CP-S8-inductor-lPin" pointList="-80,140,264,140" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S8" startpinid="Relay-CP-S8-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,140,304,140,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S8" startpinid="Mega-1-23" endpinid="LedBar-CP-led1-pinP" pointList="-80,140,100,140" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S9_1" mainComp="false" Show_id="true" Show_Val="false" Pos="280,100" rotation="0" hflip="1" vflip="1" label="S9_1" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S9_1" startpinid="Mega-1-24" endpinid="Relay-CP-S9_1-inductor-lPin" pointList="-80,100,264,100" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S9_1" startpinid="Relay-CP-S9_1-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,100,304,100,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S9_1" startpinid="Mega-1-24" endpinid="LedBar-CP-led2-pinP" pointList="-80,100,100,100" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S9_2" mainComp="false" Show_id="true" Show_Val="false" Pos="280,60" rotation="0" hflip="1" vflip="1" label="S9_2" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S9_2" startpinid="Mega-1-25" endpinid="Relay-CP-S9_2-inductor-lPin" pointList="-80,60,264,60" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S9_2" startpinid="Relay-CP-S9_2-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,60,304,60,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S9_2" startpinid="Mega-1-25" endpinid="LedBar-CP-led3-pinP" pointList="-80,60,100,60" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S10_C" mainComp="false" Show_id="true" Show_Val="false" Pos="280,20" rotation="0" hflip="1" vflip="1" label="S10_C" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S10_C" startpinid="Mega-1-26" endpinid="Relay-CP-S10_C-inductor-lPin" pointList="-80,20,264,20" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S10_C" startpinid="Relay-CP-S10_C-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,20,304,20,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S10_C" startpinid="Mega-1-26" endpinid="LedBar-CP-led4-pinP" pointList="-80,20,100,20" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S10_D" mainComp="false" Show_id="true" Show_Val="false" Pos="280,-20" rotation="0" hflip="1" vflip="1" label="S10_D" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S10_D" startpinid="Mega-1-27" endpinid="Relay-CP-S10_D-inductor-lPin" pointList="-80,-20,264,-20" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S10_D" startpinid="Relay-CP-S10_D-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,-20,304,-20,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S10_D" startpinid="Mega-1-27" endpinid="LedBar-CP-led5-pinP" pointList="-80,-20,100,-20" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S11_1" mainComp="false" Show_id="true" Show_Val="false" Pos="280,-60" rotation="0" hflip="1" vflip="1" label="S11_1" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S11_1" startpinid="Mega-1-28" endpinid="Relay-CP-S11_1-inductor-lPin" pointList="-80,-60,264,-60" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S11_1" startpinid="Relay-CP-S11_1-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,-60,304,-60,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S11_1" startpinid="Mega-1-28" endpinid="LedBar-CP-led6-pinP" pointList="-80,-60,100,-60" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S11_2" mainComp="false" Show_id="true" Show_Val="false" Pos="280,-100" rotation="0" hflip="1" vflip="1" label="S11_2" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S11_2" startpinid="Mega-1-29" endpinid="Relay-CP-S11_2-inductor-lPin" pointList="-80,-100,264,-100" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S11_2" startpinid="Relay-CP-S11_2-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,-100,304,-100,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S11_2" startpinid="Mega-1-29" endpinid="LedBar-CP-led7-pinP" pointList="-80,-100,100,-100" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S12_1" mainComp="false" Show_id="true" Show_Val="false" Pos="280,-140" rotation="0" hflip="1" vflip="1" label="S12_1" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S12_1" startpinid="Mega-1-30" endpinid="Relay-CP-S12_1-inductor-lPin" pointList="-80,-140,264,-140" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S12_1" startpinid="Relay-CP-S12_1-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,-140,304,-140,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S12_1" startpinid="Mega-1-30" endpinid="LedBar-CP-led8-pinP" pointList="-80,-140,100,-140" />
+  <item itemtype="RelaySPST" CircId="Relay-CP-S12_2" mainComp="false" Show_id="true" Show_Val="false" Pos="280,-180" rotation="0" hflip="1" vflip="1" label="S12_2" idLabPos="-20,-15" labelrot="0" valLabPos="0,0" valLabRot="0" Norm_Close="false" DT="false" Poles="1" IOn="0.02 A" IOff="0.01 A" Inductance="0.01 H" Rcoil="100 Ω" />
+  <item itemtype="Connector" uid="Conn-Coil-CP-S12_2" startpinid="Mega-1-31" endpinid="Relay-CP-S12_2-inductor-lPin" pointList="-80,-180,264,-180" />
+  <item itemtype="Connector" uid="Conn-CoilGnd-CP-S12_2" startpinid="Relay-CP-S12_2-inductor-rPin" endpinid="Ground-PE-Gnd" pointList="296,-180,304,-180,304,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-LedBar-CP-S12_2" startpinid="Mega-1-31" endpinid="LedBar-CP-led9-pinP" pointList="-80,-180,100,-180" />
+  <item itemtype="Resistor" CircId="Resistor-CP-RE-120R" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="380,140" rotation="0" hflip="1" vflip="1" label="R_E (120R)" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="120 Ω" />
+  <item itemtype="Connector" uid="Conn-S8-In" startpinid="Probe-V-CP-inpin" endpinid="Relay-CP-S8-pinP2" pointList="420,-240,350,-240,350,124,264,124" />
+  <item itemtype="Connector" uid="Conn-S8-Out" startpinid="Relay-CP-S8-switch0pinN" endpinid="Resistor-CP-RE-120R-lPin" pointList="296,124,364,140" />
+  <item itemtype="Connector" uid="Conn-RE-Gnd" startpinid="Resistor-CP-RE-120R-rPin" endpinid="Ground-PE-Gnd" pointList="396,140,410,140,410,204,-150,204" />
+  <item itemtype="Connector" uid="Conn-S7-PE" startpinid="Relay-CP-S7-switch0pinN" endpinid="Ground-PE-Gnd" pointList="296,164,310,164,310,204,-150,204" />
+  <item itemtype="Resistor" CircId="Resistor-CP-RB-2740R" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="480,100" rotation="0" hflip="1" vflip="1" label="R_B (2740R)" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="2740 Ω" />
+  <item itemtype="Connector" uid="Conn-Diode-S7" startpinid="Diode-CP-1N4148-rPin" endpinid="Relay-CP-S7-pinP2" pointList="496,-240,510,-240,510,164,264,164" />
+  <item itemtype="Connector" uid="Conn-RB-Bus" startpinid="Resistor-CP-RB-2740R-lPin" endpinid="Diode-CP-1N4148-rPin" pointList="464,100,496,100,496,-240" />
+  <item itemtype="Connector" uid="Conn-RB-S7" startpinid="Resistor-CP-RB-2740R-rPin" endpinid="Relay-CP-S7-pinP2" pointList="496,100,510,100,510,164,264,164" />
+  <item itemtype="Resistor" CircId="Resistor-CP-RC-1301R" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="480,20" rotation="0" hflip="1" vflip="1" label="R_C (1301R)" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="1301 Ω" />
+  <item itemtype="Connector" uid="Conn-S10C-In" startpinid="Diode-CP-1N4148-rPin" endpinid="Relay-CP-S10_C-pinP2" pointList="496,-240,496,4,264,4" />
+  <item itemtype="Connector" uid="Conn-S10C-Out" startpinid="Relay-CP-S10_C-switch0pinN" endpinid="Resistor-CP-RC-1301R-lPin" pointList="296,4,464,20" />
+  <item itemtype="Connector" uid="Conn-RC-S7" startpinid="Resistor-CP-RC-1301R-rPin" endpinid="Relay-CP-S7-pinP2" pointList="496,20,510,20,510,164,264,164" />
+  <item itemtype="Resistor" CircId="Resistor-CP-RD-270R" mainComp="false" ShowProp="Resistance" Show_id="true" Show_Val="true" Pos="480,-20" rotation="0" hflip="1" vflip="1" label="R_D (270R)" idLabPos="-20,-15" labelrot="0" valLabPos="-10,8" valLabRot="0" Resistance="270 Ω" />
+  <item itemtype="Connector" uid="Conn-S10D-In" startpinid="Diode-CP-1N4148-rPin" endpinid="Relay-CP-S10_D-pinP2" pointList="496,-240,496,-36,264,-36" />
+  <item itemtype="Connector" uid="Conn-S10D-Out" startpinid="Relay-CP-S10_D-switch0pinN" endpinid="Resistor-CP-RD-270R-lPin" pointList="296,-36,464,-20" />
+  <item itemtype="Connector" uid="Conn-RD-S7" startpinid="Resistor-CP-RD-270R-rPin" endpinid="Relay-CP-S7-pinP2" pointList="496,-20,510,-20,510,164,264,164" />
+</circuit>

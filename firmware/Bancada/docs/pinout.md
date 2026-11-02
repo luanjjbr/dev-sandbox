@@ -41,6 +41,26 @@ Mapeamento dos 10 relés de 5V (placa de relés com driver NPN S8050 ou módulo 
 
 *Nota: Em repouso (com os relés de bypass desenergizados), os ramos operam no Limite Superior ($10\text{ V}$ para B, $7\text{ V}$ para C e $4\text{ V}$ para D).*
 
+*Nomenclatura: $S_{10.1}$ (D27, ramo D) aparece como "S10.0" na `tabela2_estados_cp.csv` (Tabela II); $S_{9.0}$, $S_{11.0}$ e $S_{12.0}$ da Tabela II não são relés físicos, apenas o repouso sem bypass. O firmware e o `estado status` usam os nomes desta página.*
+
+### 2.1. Tabela Estado → Relés (comando `estado …`, firmware)
+
+| Estado | Comando | $V_{CP}$ | Relés fechados (demais abertos) |
+| :--- | :--- | :---: | :--- |
+| AX | `estado ax` / `a` | 12 V | nenhum |
+| BX+ | `estado bx+` | 10 V | S7 (D22) |
+| BX | `estado bx` / `b` | 9 V | S7, S9.1 (D24) |
+| BX- | `estado bx-` | 8 V | S7, S9.2 (D25) |
+| CX+ | `estado cx+` | 7 V | S7, S9.1, S10.2 (D26) |
+| CX | `estado cx` / `c` | 6 V | S7, S9.1, S10.2, S11.1 (D28) |
+| CX- | `estado cx-` | 5 V | S7, S9.1, S10.2, S11.2 (D29) |
+| DX+ | `estado dx+` | 4 V | S7, S9.1, S10.1 (D27) |
+| DX | `estado dx` / `d` | 3 V | S7, S9.1, S10.1, S12.1 (D30) |
+| DX- | `estado dx-` | 2 V | S7, S9.1, S10.1, S12.2 (D31) |
+| E | `estado e` | 1 V | S7, S8 (D23) |
+
+O Estado F (−12 V) é gerado pela estação e não é emulado pela Bancada (`estado f` → `ERRO: Estado`).
+
 ---
 
 ## 3. Parâmetros Elétricos e Segurança
@@ -48,4 +68,6 @@ Mapeamento dos 10 relés de 5V (placa de relés com driver NPN S8050 ou módulo 
 - **Nível Lógico:** 5.0 V (TTL);
 - **Lógica de Relés:** Configurada via `NIVEL_RELE_ATIVO` (`HIGH` para driver discreto NPN S8050 / `LOW` para módulos comerciais optoacoplados ativos em nível baixo);
 - **Comutação Break-Before-Make:** Assegura que apenas uma chave MOSFET do cabo PP conduza por vez, com intervalo de acomodação de $5\,\mu\text{s}$ para evitar resistências espúrias em paralelo;
+- **Comutação Break-Before-Make do CP:** abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` = 20 ms (com o tick de ~16 ms do FreeRTOS no AVR, 32–48 ms reais) e fecha só os que entram. O intermediário é a interseção dos dois estados: entre estados conectados mantém S7 (o CP nunca cai para 12 V) e nunca contém S8 nem os ramos C e D juntos (`static_assert` em `TabelaEstadosCP.cpp`);
+- **Boot Seguro:** o `setup()` coloca todas as chaves do PP e os relés do CP em nível inativo antes de criar as tasks;
 - **Resistores de Gate:** Recomendado uso de resistores pull-down de $10\text{ k}\Omega$ nos gates dos MOSFETs e nas bases dos transistores de relé para mantê-los em corte durante o reset/inicialização do microcontrolador.

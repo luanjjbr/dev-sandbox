@@ -27,7 +27,7 @@ O projeto **Bancada** é uma aplicação embarcada desenvolvida com **PlatformIO
 | **Flash** | Nano: 32 KB \| Mega: 256 KB | Memória de programa |
 | **Baud Rate Serial** | **9600 bps** (8-N-1) | Padrão unificado no firmware e monitor |
 | **Sistema Operacional** | FreeRTOS Kernel v11.1.0-3 (`feilipu/FreeRTOS`) | Escalonador preemptivo baseado em prioridades |
-| **Norma de Referência** | IEC 62196-2 / IEC 61851-1 (Pino PP) | Barramento de resistores de 47R a 4700R |
+| **Norma de Referência** | IEC 62196-2 (Pino PP) / IEC 61851-1 Anexo A (Pino CP) | PP: resistores de 47R a 4700R; CP: 10 relés D22..D31 (só Mega) |
 
 ---
 
@@ -38,21 +38,23 @@ flowchart TD
     subgraph Hardware["Camada de Hardware (AVR 5V)"]
         LED["LED Integrado (Pino D13)"]
         MOSFETS["Barramento PP: Chaves S1 a S6<br>(Pinos D4 a D9)"]
+        RELES["Barramento CP: Relés S7 a S12.2<br>(Pinos D22 a D31, só Mega)"]
         UART["Porta Serial UART (9600 bps)"]
     end
 
     subgraph Firmware["Firmware (PlatformIO / FreeRTOS)"]
         subgraph Tasks["Tarefas Preemptivas FreeRTOS"]
             TBlink["tarefaBlink (Prio 1, Stack 128w)<br>Pisca LED D13 a cada 500 ms (Heartbeat)"]
-            TSerial["tarefaSerial (Prio 1, Stack 128w)<br>Parser CLI UART não-bloqueante (polling 20ms)"]
+            TSerial["tarefaSerial (Prio 1, Stack 128w Nano / 256w Mega)<br>Parser CLI UART não-bloqueante (polling 20ms)"]
         end
 
         subgraph Classes["Camada de Abstração de Hardware (POO)"]
             ObjCabo["Objeto EmuladorCabo<br>Proteção Break-Before-Make"]
+            ObjCP["Objeto EmuladorVeiculoCP<br>Break-Before-Make pela interseção (20 ms)"]
         end
 
         subgraph Config["Configurações Globais"]
-            ConfHW["ConfigHardware.h<br>Pinos S1-S6, Baud 9600, Pilhas 128w"]
+            ConfHW["ConfigHardware.h<br>Pinos S1-S6 e CP, Baud 9600, Pilhas, Tempo BBM"]
         end
     end
 
@@ -62,6 +64,9 @@ flowchart TD
     UART <-->|"Comandos / Respostas"| TSerial
     TSerial -->|"cabo.ativarCanal(n)"| ObjCabo
     ObjCabo -->|"digitalWrite(LOW -> HIGH)"| MOSFETS
+    ConfHW -.-> ObjCP
+    TSerial -->|"veiculoCP.ativarEstado(e)"| ObjCP
+    ObjCP -->|"digitalWrite (sai -> espera -> entra)"| RELES
 ```
 
 ---
@@ -80,8 +85,19 @@ A interface CLI opera de forma não-bloqueante na `tarefaSerial`, respondendo co
 | **`cabo 5`** | Ativa S5 ($100\,\Omega$ - Cabo 63 A) | `OK` |
 | **`cabo 6`** | Ativa S6 ($47\,\Omega$ - Simulação de Falha/Curto) | `OK` |
 | **`cabo <invalido>`** | Argumento fora de 0 a 6 ou não numérico | `ERRO: Cabo` |
+| **`cabo status`** | Relatório do canal ativo | `[STATUS CABO] ...` |
+| **`estado ax\|bx+\|bx\|bx-\|cx+\|cx\|cx-\|dx+\|dx\|dx-\|e`** | Comuta o CP (só Mega; tabela em `docs/pinout.md` §2.1) | `OK` |
+| **`estado a\|b\|c\|d`** | Atalhos para o nominal de cada grupo | `OK` |
+| **`estado status`** | Relatório do CP (estado, Vcp, relés fechados) | `[STATUS CP] ...` |
+| **`estado <invalido>`** (inclui `f`) | Argumento desconhecido | `ERRO: Estado` |
+| **`estado ...` no Nano** | CP inexistente no ATmega328P | `ERRO: CP indisponivel no Nano` |
+| **`debug stack`** | Stack livre (*high water mark*) das tasks | `[STACK] ...` |
 | **`help` ou `?`** | Imprime o menu com os comandos e a tabela | Menu de Ajuda |
-| **Qualquer outro texto** | Comando não reconhecido | `ERRO` |
+| **Linha com mais de 31 caracteres** | Descartada inteira (nunca executa um prefixo truncado) | `ERRO: Comando longo` |
+| **Qualquer outro texto** (inclui `cabo1`, `estadox`) | Comando não reconhecido | `ERRO` |
+
+> [!NOTE]
+> **CP — troca de estado e boot:** o `EmuladorVeiculoCP` abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` (20 ms; 32–48 ms reais com o tick de ~16 ms do FreeRTOS) e fecha só os que entram. Entre estados conectados, o intermediário (interseção) mantém S7 e nunca contém S8 nem os ramos C+D juntos (`static_assert`). A pausa roda **dentro** do `xSerialMutex`. Repetir o estado atual é *no-op*. No `setup()`, PP e CP são colocados em nível inativo antes das tasks. O Estado F (−12 V) é da estação e não é emulado.
 
 ---
 
@@ -116,9 +132,12 @@ Bancada/
 ├── include/               # Arquivos de cabeçalho globais
 │   └── ConfigHardware.h   # Mapeamento de pinos S1-S6, baud 9600 e pilhas
 ├── lib/                   # Módulos reutilizáveis em C++ (POO)
-│   └── EmuladorCabo/      # Biblioteca de emulação do cabo PP
-│       ├── EmuladorCabo.h # Declaração da classe e enum TipoCabo
-│       └── EmuladorCabo.cpp # Implementação dos métodos e Break-Before-Make
+│   ├── EmuladorCabo/      # Biblioteca de emulação do cabo PP
+│   │   ├── EmuladorCabo.h # Declaração da classe e enum TipoCabo
+│   │   └── EmuladorCabo.cpp # Implementação dos métodos e Break-Before-Make
+│   └── EmuladorVeiculoCP/ # Biblioteca de emulação do veículo no CP (Mega)
+│       ├── TabelaEstadosCP.h/.cpp   # Lógica pura: enum, tabela estado->relés, parser, static_assert
+│       └── EmuladorVeiculoCP.h/.cpp # Hardware: relés D22..D31, break-before-make, status
 ├── src/                   # Ponto de entrada do firmware
 │   └── main.cpp           # CLI serial interativa e tarefas preemptivas FreeRTOS
 ├── tests/                 # Estrutura preparada para automação de testes
