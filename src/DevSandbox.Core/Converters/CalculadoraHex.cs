@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
@@ -11,6 +12,9 @@ namespace DevSandbox.Core.Converters
     /// entre dígitos (<c>FF-FF</c>, <c>1100-0011</c>). Sinal negativo é recusado com <see cref="FormatException"/>.
     /// Entradas sem nenhum dígito (vazias, só prefixo ou só separadores) lançam <see cref="ArgumentException"/>.
     /// </remarks>
+    [SuppressMessage("Performance", "CA1822:Mark members as static",
+        Justification = "API pública de instância usada pela FormCalculadora e pelos testes; tornar os métodos " +
+                        "estáticos quebraria as chamadas existentes sem ganho mensurável.")]
     public sealed class CalculadoraHex
     {
         public const string MensagemNegativo =

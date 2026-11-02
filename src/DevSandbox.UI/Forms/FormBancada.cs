@@ -160,7 +160,7 @@ namespace DevSandbox.UI.Forms
             foreach (var (rb, cabo) in _radiosPP)
             {
                 if (!cabo.ForaDaNorma()) continue;
-                if (!rb.Text.EndsWith("*", StringComparison.Ordinal)) rb.Text += " *";
+                if (!rb.Text.EndsWith('*')) rb.Text += " *";
                 _dicas.SetToolTip(rb, $"Resistor de {cabo.ObterResistenciaNominal()} Ω: {nota}.");
             }
 
@@ -230,7 +230,7 @@ namespace DevSandbox.UI.Forms
 
             try
             {
-                int baudRate = Convert.ToInt32(cboBaudRate.SelectedItem);
+                int baudRate = Convert.ToInt32(cboBaudRate.SelectedItem, CultureInfo.InvariantCulture);
                 _engine.Conectar(porta, baudRate);
                 AtualizarEstadoUI(conectado: true);
                 AppendTerminal($"Conectado com sucesso à porta {porta} @ {baudRate} bps.");

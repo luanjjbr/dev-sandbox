@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -82,11 +83,11 @@ namespace DevSandbox.UI.Forms
         private void ExibirResultados(string hex, long dec, string bin)
         {
             _rawHex = $"0x{hex}";
-            _rawDec = dec.ToString();
+            _rawDec = dec.ToString(CultureInfo.InvariantCulture); // valor copiado: sem separador de milhar
             _rawBin = bin;
 
             lblHexValor.Text = _rawHex;
-            lblDecimalValor.Text = dec.ToString("N0");
+            lblDecimalValor.Text = dec.ToString("N0", CultureInfo.CurrentCulture); // exibição: separador do usuário
             lblBinarioValor.Text = QuebrarBinarioEm32Bits(_calculadora.FormatarBinario(bin));
         }
 

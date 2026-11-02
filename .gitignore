@@ -462,3 +462,6 @@ dist/
 publish/
 
 
+
+# Executável único antigo (substituído pelo anexo do GitHub Release; gerado em dist/standalone/)
+app/

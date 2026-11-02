@@ -6,6 +6,11 @@
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
 		<RootNamespace>DevSandbox.Tests</RootNamespace>
+		<!-- Só no projeto de testes:
+		     CA1707 - os nomes de teste seguem a convenção Metodo_Cenario_ResultadoEsperado (com '_').
+		     CA1861 - arrays literais nos Assert (Is.EqualTo(new[] { ... })) rodam uma vez por teste; extraí-los
+		              para campos static readonly só afastaria o valor esperado do teste. -->
+		<NoWarn>$(NoWarn);CA1707;CA1861</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

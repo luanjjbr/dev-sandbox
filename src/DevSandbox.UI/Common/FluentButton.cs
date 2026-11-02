@@ -12,9 +12,9 @@ namespace DevSandbox.UI.Common
     /// </summary>
     public class FluentButton : Button
     {
-        private bool _isHovered = false;
-        private bool _isPressed = false;
-        private bool _isAccent = false;
+        private bool _isHovered;
+        private bool _isPressed;
+        private bool _isAccent;
         private int _cornerRadius = 6;
         private Color? _customAccentColor;
         private Color? _customTextColor;

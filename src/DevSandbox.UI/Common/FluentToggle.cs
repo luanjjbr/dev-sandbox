@@ -12,7 +12,7 @@ namespace DevSandbox.UI.Common
     /// </summary>
     public class FluentToggle : Control
     {
-        private bool _checked = false;
+        private bool _checked;
         public event EventHandler? CheckedChanged;
 
         public FluentToggle()

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DevSandbox.Core.Bancada;
@@ -261,7 +262,7 @@ namespace DevSandbox.Tests
         {
             "AX_NOMINAL" => "AX",
             "E_FALHA" => "E",
-            _ => nome[..2] + (nome.EndsWith("_SUPERIOR") ? "+" : nome.EndsWith("_INFERIOR") ? "-" : "")
+            _ => nome[..2] + (nome.EndsWith("_SUPERIOR", StringComparison.Ordinal) ? "+" : nome.EndsWith("_INFERIOR", StringComparison.Ordinal) ? "-" : "")
         };
 
         private static List<string> NomesDoEnumDoFirmware()
@@ -343,7 +344,7 @@ namespace DevSandbox.Tests
                     "S10_D" => "S10.1",
                     _ => chave.Replace('_', '.')
                 };
-                mapa[id] = (int.Parse(m.Groups[2].Value), nome);
+                mapa[id] = (int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture), nome);
             }
             return mapa;
         }
@@ -415,7 +416,7 @@ namespace DevSandbox.Tests
                 Assert.That(r.EstadoCP, Is.EqualTo(esperado), linha);
 
                 Match v = Regex.Match(m.Groups[2].Value, @"Vcp:\s*(\d+) V");
-                Assert.That(double.Parse(v.Groups[1].Value), Is.EqualTo(esperado.ObterTensaoNominal()), linha);
+                Assert.That(double.Parse(v.Groups[1].Value, CultureInfo.InvariantCulture), Is.EqualTo(esperado.ObterTensaoNominal()), linha);
             }
         }
 

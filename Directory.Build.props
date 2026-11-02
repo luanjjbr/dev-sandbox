@@ -1,0 +1,11 @@
+<Project>
+  <!-- Regras de build comuns a Core, UI e testes (etapa 5 do plano de melhorias). -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Analisadores do SDK no conjunto "recommended": cobre nulabilidade, Dispose, globalização e
+         desempenho sem as regras puramente estilísticas do conjunto "all". -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+</Project>

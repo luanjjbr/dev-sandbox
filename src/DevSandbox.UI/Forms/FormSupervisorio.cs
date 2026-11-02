@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
 using DevSandbox.Core.Serial;
@@ -107,7 +108,7 @@ namespace DevSandbox.UI.Forms
 
             try
             {
-                int baudRateSelecionado = Convert.ToInt32(cboBaudRate.SelectedItem);
+                int baudRateSelecionado = Convert.ToInt32(cboBaudRate.SelectedItem, CultureInfo.InvariantCulture);
                 _engine.Conectar(portaSelecionada, baudRateSelecionado);
                 AtualizarEstadoUI(conectado: true);
             }

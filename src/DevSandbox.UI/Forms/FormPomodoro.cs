@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.Media;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -200,11 +201,11 @@ namespace DevSandbox.UI.Forms
 
             if (lblTempo.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => lblTempo.Text = tempoRestante.ToString(@"mm\:ss")));
+                this.BeginInvoke(new Action(() => lblTempo.Text = tempoRestante.ToString(@"mm\:ss", CultureInfo.InvariantCulture)));
             }
             else
             {
-                lblTempo.Text = tempoRestante.ToString(@"mm\:ss");
+                lblTempo.Text = tempoRestante.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
             }
         }
 

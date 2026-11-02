@@ -14,7 +14,7 @@ namespace DevSandbox.UI.Common
     public class FluentTextBox : UserControl
     {
         private readonly TextBox _innerBox;
-        private bool _isFocused = false;
+        private bool _isFocused;
         private int _cornerRadius = 5;
         private string _placeholder = "";
 

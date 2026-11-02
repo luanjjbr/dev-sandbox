@@ -18,8 +18,9 @@
     <ProjectReference Include="..\DevSandbox.Core\DevSandbox.Core.csproj" />
   </ItemGroup>
 
-  <!-- Copia automaticamente os executáveis gerados para a pasta dist/ na raiz do projeto -->
-  <Target Name="CopyToDist" AfterTargets="Build">
+  <!-- Copia os executáveis gerados para a pasta dist/ na raiz do projeto (só em Release:
+       o build de Debug do dia a dia e o dos testes não tocam em dist/) -->
+  <Target Name="CopyToDist" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
       <DistDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\dist'))</DistDir>
     </PropertyGroup>

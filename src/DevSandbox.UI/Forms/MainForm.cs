@@ -41,7 +41,7 @@ namespace DevSandbox.UI.Forms
             ConfigurarCard(cardBancada, lblTituloBancada, lblDescBancada, btnAbrirBancada, AbrirBancada);
         }
 
-        private void ConfigurarCard(FluentCard card, Label titulo, Label desc, FluentButton botao, Action aoClicar)
+        private static void ConfigurarCard(FluentCard card, Label titulo, Label desc, FluentButton botao, Action aoClicar)
         {
             card.CardColor = ThemeManager.FundoCard;
             card.BorderColor = ThemeManager.BordaCard;

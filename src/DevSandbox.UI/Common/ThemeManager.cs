@@ -75,7 +75,9 @@ namespace DevSandbox.UI.Common
                 int res = DwmSetWindowAttribute(form.Handle, 20, ref useDarkMode, sizeof(int));
                 if (res != 0)
                 {
-                    DwmSetWindowAttribute(form.Handle, 19, ref useDarkMode, sizeof(int));
+                    // Fallback para builds antigos do Windows 10 (atributo 19). Melhor esforço: se também
+                    // falhar, a barra de título fica clara e nada mais muda, então o HRESULT é descartado.
+                    _ = DwmSetWindowAttribute(form.Handle, 19, ref useDarkMode, sizeof(int));
                 }
             }
             catch

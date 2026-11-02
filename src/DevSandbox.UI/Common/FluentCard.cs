@@ -14,8 +14,8 @@ namespace DevSandbox.UI.Common
         private int _cornerRadius = 8;
         private Color _borderColor = ThemeManager.BordaCard;
         private Color _cardColor = ThemeManager.FundoCard;
-        private bool _enableHoverEffect = false;
-        private bool _isHovered = false;
+        private bool _enableHoverEffect;
+        private bool _isHovered;
 
         public FluentCard()
         {

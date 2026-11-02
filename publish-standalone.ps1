@@ -1,9 +1,16 @@
-# Script para gerar o executável único autocontido
-# Pega apenas o arquivo executável necessário para rodar e faz uma cópia para a pasta 'app' no diretório principal.
+﻿# Gera o executável único autocontido (win-x64) em dist/standalone/DevSandbox.UI.exe.
+# O .exe NÃO é versionado no Git (dist/ e app/ estão no .gitignore): ele é publicado como anexo
+# de um GitHub Release. Rode na raiz do repositório.
+
+$ErrorActionPreference = 'Stop'
+Set-Location -Path $PSScriptRoot
+
+$pastaSaida = 'dist/standalone'
+$exe = Join-Path $pastaSaida 'DevSandbox.UI.exe'
 
 Write-Host "🚀 Gerando executável único otimizado (apenas o essencial para rodar)..." -ForegroundColor Cyan
 
-# 1. Compila gerando apenas o executável único com compressão e sem símbolos de debug (.pdb)
+# Executável único com compressão e sem símbolos de debug (.pdb)
 dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj `
     -c Release `
     -r win-x64 `
@@ -12,27 +19,25 @@ dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj `
     -p:EnableCompressionInSingleFile=true `
     -p:DebugType=None `
     -p:DebugSymbols=false `
-    -o dist/standalone
+    -o $pastaSaida
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n❌ Erro ao compilar o executável." -ForegroundColor Red
     exit $LASTEXITCODE
 }
 
-# 2. Cria a pasta 'app' no diretório principal (rastreada pelo Git)
-$pastaDestino = "app"
-if (-not (Test-Path $pastaDestino)) {
-    New-Item -ItemType Directory -Path $pastaDestino -Force | Out-Null
+if (-not (Test-Path $exe)) {
+    Write-Host "`n❌ O publish terminou, mas $exe não foi gerado." -ForegroundColor Red
+    exit 1
 }
 
-$exeOrigem = "dist/standalone/DevSandbox.UI.exe"
-$exeDestino = "$pastaDestino/DevSandbox.UI.exe"
+$arquivo = Get-Item $exe
+$tamanhoMB = [math]::Round($arquivo.Length / 1MB, 1)
 
-# 3. Copia apenas o arquivo .exe para a pasta app/
-Copy-Item -Path $exeOrigem -Destination $exeDestino -Force
+Write-Host "`n✅ Executável gerado:" -ForegroundColor Green
+Write-Host "   $($arquivo.FullName) ($tamanhoMB MB)" -ForegroundColor Yellow
 
-$tamanhoMB = [math]::Round(((Get-Item $exeDestino).Length / 1MB), 1)
-
-Write-Host "`n✅ Executável copiado com sucesso para o diretório principal:" -ForegroundColor Green
-Write-Host "   $exeDestino ($tamanhoMB MB)" -ForegroundColor Yellow
-Write-Host "`n👉 Agora, quando você rodar o 'git add' e 'git commit', a pasta '$pastaDestino' subirá junto para o GitHub!" -ForegroundColor White
+Write-Host "`n📦 Roteiro de release (o .exe vai como anexo do GitHub Release, não no Git):" -ForegroundColor White
+Write-Host "   1. git tag -a vX.Y.Z -m `"Release vX.Y.Z`"" -ForegroundColor Gray
+Write-Host "   2. git push origin vX.Y.Z" -ForegroundColor Gray
+Write-Host "   3. gh release create vX.Y.Z $pastaSaida/DevSandbox.UI.exe --title `"DevSandbox vX.Y.Z`" --notes `"<o que mudou>`"" -ForegroundColor Gray
