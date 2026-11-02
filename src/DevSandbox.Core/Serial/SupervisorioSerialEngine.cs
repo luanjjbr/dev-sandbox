@@ -1,30 +1,94 @@
-using System;
 using System.IO.Ports;
-using System.Threading;
 
 namespace DevSandbox.Core.Serial
 {
-    public class SupervisorioSerialEngine : IDisposable
+    /// <summary>
+    /// Motor serial resiliente: conexão, envio protegido, watchdog de presença da porta e reconexão automática.
+    /// </summary>
+    /// <remarks>
+    /// Regras de concorrência:
+    /// <list type="bullet">
+    /// <item>Os eventos são disparados fora do <c>lock</c> interno, para que um assinante que use <c>Control.Invoke</c>
+    /// não provoque deadlock com a thread de UI.</item>
+    /// <item>A thread do <c>DataReceived</c> nunca adquire o <c>lock</c> interno: o <c>SerialPort</c> segura um lock
+    /// próprio durante o evento e o <c>Close()</c> (chamado sob o nosso lock) espera por ele — inversão de locks.
+    /// Uma falha de leitura só é sinalizada; o watchdog (≤ 1 s) trata a perda.</item>
+    /// <item>Cada <c>Conectar</c>/<c>Desconectar</c> abre uma nova sessão; eventos decididos numa sessão anterior
+    /// são descartados.</item>
+    /// </list>
+    /// </remarks>
+    public sealed class SupervisorioSerialEngine : ISerialEngine
     {
-        private SerialPort? _portaSerial;
-        private System.Timers.Timer? _watchdogTimer;
+        private static readonly TimeSpan IntervaloWatchdogPadrao = TimeSpan.FromSeconds(1);
+
+        private readonly Func<string, int, ISerialPort> _fabricaPorta;
+        private readonly Func<string[]> _listarPortas;
+        private readonly TimeSpan? _intervaloWatchdog;
         private readonly object _lock = new();
-        private bool _disposed = false;
+
+        private volatile ISerialPort? _portaSerial;
+        private System.Timers.Timer? _watchdogTimer;
+        private bool _monitorando;
+        private volatile bool _disposed;
+        private int _sessao;
 
         private string? _ultimaPorta;
         private int _ultimoBaudRate;
-        private bool _tentandoReconectar = false;
+        private volatile bool _tentandoReconectar;
 
-        // Eventos para notificar a interface sobre o status da conexão
+        // Porta cuja leitura falhou na thread do DataReceived; tratada pelo watchdog.
+        private volatile ISerialPort? _portaComFalhaDeLeitura;
+
+        // Só usa a ausência em GetPortNames() como sinal de queda se a porta estava listada ao conectar
+        // (alguns drivers de portas virtuais não se registram em HARDWARE\DEVICEMAP\SERIALCOMM).
+        private bool _portaListadaAoConectar;
+
         public event EventHandler<string>? DadosRecebidos;
         public event EventHandler? ConexaoPerdida;
         public event EventHandler? Reconectado;
 
-        public bool EstaConectado => _portaSerial != null && _portaSerial.IsOpen;
+        public SupervisorioSerialEngine()
+            : this((nome, baud) => new SistemaSerialPort(nome, baud), SerialPort.GetPortNames, IntervaloWatchdogPadrao)
+        {
+        }
+
+        /// <summary>
+        /// Construtor para testes: fábrica de portas, enumeração de portas e intervalo do watchdog
+        /// (<c>null</c> desliga o timer; o ciclo é então executado manualmente por <see cref="ExecutarCicloWatchdog"/>).
+        /// </summary>
+        internal SupervisorioSerialEngine(Func<string, int, ISerialPort> fabricaPorta, Func<string[]> listarPortas, TimeSpan? intervaloWatchdog)
+        {
+            _fabricaPorta = fabricaPorta ?? throw new ArgumentNullException(nameof(fabricaPorta));
+            _listarPortas = listarPortas ?? throw new ArgumentNullException(nameof(listarPortas));
+            _intervaloWatchdog = intervaloWatchdog;
+        }
+
+        public bool EstaConectado
+        {
+            get
+            {
+                ISerialPort? porta = _portaSerial;
+                try { return porta != null && porta.IsOpen; }
+                catch (ObjectDisposedException) { return false; }
+            }
+        }
+
         public bool TentandoReconectar => _tentandoReconectar;
 
+        /// <summary>
+        /// <c>true</c> se uma falha de leitura foi sinalizada e aguarda o próximo ciclo do watchdog.
+        /// </summary>
+        internal bool FalhaDeLeituraPendente => _portaComFalhaDeLeitura != null;
+
         // Retorna a lista de portas COM disponíveis no Windows (ex: COM1, COM6)
-        public string[] ObterPortasDisponiveis() => SerialPort.GetPortNames();
+        public string[] ObterPortasDisponiveis()
+        {
+            try { return _listarPortas() ?? []; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                return [];
+            }
+        }
 
         // Conecta à porta serial especificada e inicia o monitoramento de integridade
         public void Conectar(string nomePorta, int baudRate)
@@ -35,67 +99,24 @@ namespace DevSandbox.Core.Serial
             if (baudRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(baudRate), "O Baud Rate deve ser maior que zero.");
 
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
             lock (_lock)
             {
+                // Dispose pode ter ocorrido entre a checagem acima e a aquisição do lock
+                ObjectDisposedException.ThrowIf(_disposed, this);
+
+                _sessao++;
+                PararWatchdog();
+
                 _ultimaPorta = nomePorta;
                 _ultimoBaudRate = baudRate;
                 _tentandoReconectar = false;
+                _portaComFalhaDeLeitura = null;
+                _portaListadaAoConectar = PortaEstaListada(ObterPortasDisponiveis());
 
                 AbrirPortaInterno();
                 IniciarWatchdog();
-            }
-        }
-
-        private void AbrirPortaInterno()
-        {
-            FecharPortaInterno();
-
-            SerialPort? porta = null;
-            try
-            {
-                porta = new SerialPort(_ultimaPorta!, _ultimoBaudRate)
-                {
-                    ReadTimeout = 1000,
-                    WriteTimeout = 1000
-                };
-                porta.DataReceived += PortaSerial_DataReceived;
-                porta.Open();
-                _portaSerial = porta;
-            }
-            catch
-            {
-                if (porta != null)
-                {
-                    try { porta.DataReceived -= PortaSerial_DataReceived; } catch { }
-                    try { if (porta.IsOpen) porta.Close(); } catch { }
-                    try { porta.Dispose(); } catch { }
-                }
-                _portaSerial = null;
-                throw;
-            }
-        }
-
-        private void FecharPortaInterno()
-        {
-            if (_portaSerial != null)
-            {
-                try
-                {
-                    _portaSerial.DataReceived -= PortaSerial_DataReceived;
-                    if (_portaSerial.IsOpen)
-                    {
-                        _portaSerial.Close();
-                    }
-                }
-                catch { }
-
-                try
-                {
-                    _portaSerial.Dispose();
-                }
-                catch { }
-
-                _portaSerial = null;
             }
         }
 
@@ -104,41 +125,191 @@ namespace DevSandbox.Core.Serial
         {
             lock (_lock)
             {
+                _sessao++;
                 PararWatchdog();
                 _tentandoReconectar = false;
+                _portaComFalhaDeLeitura = null;
                 FecharPortaInterno();
             }
         }
 
-        // Transmite texto para a porta serial
-        public void EnviarDados(string texto, bool adicionarNovaLinha = true)
+        /// <summary>
+        /// Transmite texto para a porta serial. Retorna <c>true</c> só se a escrita ocorreu.
+        /// Em falha de E/S fecha a porta, entra em reconexão e dispara <see cref="ConexaoPerdida"/>.
+        /// </summary>
+        public bool EnviarDados(string texto, bool adicionarNovaLinha = true)
         {
+            if (string.IsNullOrEmpty(texto) || _disposed) return false;
+
+            bool perdeuConexao;
+            int sessao;
             lock (_lock)
             {
-                if (EstaConectado && !string.IsNullOrEmpty(texto))
+                ISerialPort? porta = _portaSerial;
+                if (porta == null || !EstaConectado) return false;
+
+                try
                 {
                     if (adicionarNovaLinha)
-                        _portaSerial!.WriteLine(texto);
+                        porta.WriteLine(texto);
                     else
-                        _portaSerial!.Write(texto);
+                        porta.Write(texto);
+
+                    return true;
                 }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException or TimeoutException
+                                               or UnauthorizedAccessException or ObjectDisposedException)
+                {
+                    perdeuConexao = MarcarPerdaInterno();
+                    sessao = _sessao;
+                }
+            }
+
+            if (perdeuConexao) DispararSeMesmaSessao(ConexaoPerdida, sessao);
+            return false;
+        }
+
+        /// <summary>
+        /// Um ciclo do watchdog: detecta porta fechada, removida da enumeração do Windows ou com falha de leitura
+        /// sinalizada e, em reconexão, reabre a porta assim que ela reaparece. Chamado pelo timer (1 s).
+        /// </summary>
+        internal void ExecutarCicloWatchdog()
+        {
+            if (_disposed) return;
+
+            bool perdeuConexao = false;
+            bool reconectou = false;
+            int sessao;
+
+            // Garante que apenas um ciclo do watchdog execute por vez
+            if (!Monitor.TryEnter(_lock)) return;
+            try
+            {
+                if (_disposed || !_monitorando) return;
+
+                sessao = _sessao;
+                string[] portasAtivas = ObterPortasDisponiveis();
+                bool portaPresente = PortaEstaListada(portasAtivas);
+
+                ISerialPort? portaComFalha = _portaComFalhaDeLeitura;
+                _portaComFalhaDeLeitura = null;
+
+                ISerialPort? porta = _portaSerial;
+                if (porta != null && !_tentandoReconectar)
+                {
+                    bool fechada = !EstaConectado;
+                    bool sumiu = _portaListadaAoConectar && !portaPresente;
+                    bool falhouLeitura = ReferenceEquals(portaComFalha, porta);
+                    if (fechada || sumiu || falhouLeitura)
+                    {
+                        perdeuConexao = MarcarPerdaInterno();
+                    }
+                }
+
+                // Porta que nunca foi listada (driver virtual): tenta reabrir às cegas a cada ciclo
+                if (_tentandoReconectar && (portaPresente || !_portaListadaAoConectar))
+                {
+                    reconectou = TentarReconectarInterno();
+                }
+            }
+            finally
+            {
+                Monitor.Exit(_lock);
+            }
+
+            if (perdeuConexao) DispararSeMesmaSessao(ConexaoPerdida, sessao);
+            if (reconectou) DispararSeMesmaSessao(Reconectado, sessao);
+        }
+
+        // Descarta o evento se um Conectar/Desconectar abriu outra sessão depois que ele foi decidido.
+        private void DispararSeMesmaSessao(EventHandler? handler, int sessao)
+        {
+            if (Volatile.Read(ref _sessao) != sessao || _disposed) return;
+            handler?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Deve ser chamado com _lock adquirido. Retorna true se a perda é nova (evento a disparar).
+        private bool MarcarPerdaInterno()
+        {
+            if (_disposed || !_monitorando || _tentandoReconectar) return false;
+
+            _tentandoReconectar = true;
+            FecharPortaInterno();
+            return true;
+        }
+
+        private bool PortaEstaListada(string[] portas) =>
+            !string.IsNullOrEmpty(_ultimaPorta) &&
+            Array.Exists(portas, p => string.Equals(p, _ultimaPorta, StringComparison.OrdinalIgnoreCase));
+
+        private void AbrirPortaInterno()
+        {
+            FecharPortaInterno();
+
+            ISerialPort? porta = null;
+            try
+            {
+                porta = _fabricaPorta(_ultimaPorta!, _ultimoBaudRate);
+                porta.DataReceived += PortaSerial_DataReceived;
+                porta.Open();
+                _portaSerial = porta;
+            }
+            catch
+            {
+                if (porta != null)
+                {
+                    porta.DataReceived -= PortaSerial_DataReceived;
+                    try { if (porta.IsOpen) porta.Close(); } catch { /* porta já inválida */ }
+                    try { porta.Dispose(); } catch { /* porta já inválida */ }
+                }
+                _portaSerial = null;
+                throw;
+            }
+        }
+
+        private void FecharPortaInterno()
+        {
+            ISerialPort? porta = _portaSerial;
+            if (porta == null) return;
+
+            _portaSerial = null;
+            porta.DataReceived -= PortaSerial_DataReceived;
+            try { if (porta.IsOpen) porta.Close(); } catch { /* porta já inválida (cabo removido) */ }
+            try { porta.Dispose(); } catch { /* porta já inválida (cabo removido) */ }
+        }
+
+        // Deve ser chamado com _lock adquirido. Retorna true se reabriu a porta.
+        private bool TentarReconectarInterno()
+        {
+            try
+            {
+                AbrirPortaInterno();
+                _tentandoReconectar = false;
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                // Falha nesta tentativa; mantém o status até a porta ser restabelecida
+                return false;
             }
         }
 
         private void IniciarWatchdog()
         {
             PararWatchdog();
+            _monitorando = true;
 
-            _watchdogTimer = new System.Timers.Timer(1000)
-            {
-                AutoReset = true
-            };
+            if (_intervaloWatchdog is not { } intervalo) return;
+
+            _watchdogTimer = new System.Timers.Timer(intervalo.TotalMilliseconds) { AutoReset = true };
             _watchdogTimer.Elapsed += WatchdogTimer_Elapsed;
             _watchdogTimer.Start();
         }
 
         private void PararWatchdog()
         {
+            _monitorando = false;
+
             if (_watchdogTimer != null)
             {
                 _watchdogTimer.Stop();
@@ -148,84 +319,32 @@ namespace DevSandbox.Core.Serial
             }
         }
 
-        private void WatchdogTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        private void WatchdogTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e) => ExecutarCicloWatchdog();
+
+        // Roda na thread do SerialPort: NÃO adquirir _lock aqui (ver remarks da classe).
+        private void PortaSerial_DataReceived(object? sender, EventArgs e)
         {
-            if (_disposed) return;
+            if (_disposed || sender is not ISerialPort porta) return;
 
-            // Garante que apenas um ciclo do watchdog execute por vez
-            if (Monitor.TryEnter(_lock))
-            {
-                try
-                {
-                    if (_disposed || _watchdogTimer == null) return;
-
-                    // Detecta se a porta foi fechada repentinamente (ex: remoção do cabo USB)
-                    if (_portaSerial != null && !_portaSerial.IsOpen && !_tentandoReconectar)
-                    {
-                        _tentandoReconectar = true;
-                        FecharPortaInterno();
-                        ConexaoPerdida?.Invoke(this, EventArgs.Empty);
-                    }
-
-                    if (_tentandoReconectar)
-                    {
-                        TentarReconectarInterno();
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(_lock);
-                }
-            }
-        }
-
-        private void TentarReconectarInterno()
-        {
+            string? dados;
             try
             {
-                string[] portas = ObterPortasDisponiveis();
-                bool portaEncontrada = Array.Exists(portas, p => p.Equals(_ultimaPorta, StringComparison.OrdinalIgnoreCase));
+                if (!porta.IsOpen) return;
 
-                if (portaEncontrada)
-                {
-                    AbrirPortaInterno();
-                    _tentandoReconectar = false;
-                    Reconectado?.Invoke(this, EventArgs.Empty);
-                }
+                // Leitura não bloqueante de todo o buffer disponível
+                dados = porta.ReadExisting();
             }
-            catch
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or TimeoutException or ObjectDisposedException or UnauthorizedAccessException)
             {
-                // Falha nesta tentativa; mantém status até a porta ser reestabelecida
+                // Só sinaliza; o watchdog confirma se ainda é a porta ativa e trata a perda.
+                _portaComFalhaDeLeitura = porta;
+                return;
             }
-        }
 
-        private void PortaSerial_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            if (_disposed) return;
-
-            try
+            // Só repassa dados da porta da sessão atual (descarta sobras de uma porta já fechada/substituída)
+            if (!string.IsNullOrEmpty(dados) && ReferenceEquals(porta, _portaSerial) && !_disposed)
             {
-                if (_portaSerial != null && _portaSerial.IsOpen)
-                {
-                    // Leitura não bloqueante de todo o buffer disponível
-                    string dados = _portaSerial.ReadExisting();
-                    if (!string.IsNullOrEmpty(dados))
-                    {
-                        DadosRecebidos?.Invoke(this, dados);
-                    }
-                }
-            }
-            catch
-            {
-                lock (_lock)
-                {
-                    if (!_disposed && _watchdogTimer != null && !_tentandoReconectar)
-                    {
-                        _tentandoReconectar = true;
-                        FecharPortaInterno();
-                        ConexaoPerdida?.Invoke(this, EventArgs.Empty);
-                    }
-                }
+                DadosRecebidos?.Invoke(this, dados);
             }
         }
 
@@ -234,7 +353,6 @@ namespace DevSandbox.Core.Serial
             if (_disposed) return;
             _disposed = true;
             Desconectar();
-            GC.SuppressFinalize(this);
         }
     }
 }

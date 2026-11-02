@@ -1,5 +1,6 @@
 using System;
 using DevSandbox.Core.Bancada;
+using DevSandbox.Tests.Fakes;
 using NUnit.Framework;
 
 namespace DevSandbox.Tests
@@ -7,26 +8,31 @@ namespace DevSandbox.Tests
     [TestFixture]
     public class BancadaEngineTests
     {
+        private FakeSerialEngine _serial;
         private BancadaEngine _engine;
 
         [SetUp]
         public void Setup()
         {
-            _engine = new BancadaEngine();
+            _serial = new FakeSerialEngine { EstaConectado = true };
+            _engine = new BancadaEngine(_serial);
         }
 
         [TearDown]
         public void TearDown()
         {
             _engine.Dispose();
+            _serial.Dispose(); // idempotente; o BancadaEngine já o descartou
         }
 
         [Test]
         public void EstadoInicial_DeveSerCircuitoAbertoEEstadoA()
         {
-            Assert.That(_engine.CaboAtual, Is.EqualTo(EstadoCaboPP.CircuitoAberto));
-            Assert.That(_engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.EstadoA));
-            Assert.That(_engine.EstaConectado, Is.False);
+            using var engine = new BancadaEngine();
+
+            Assert.That(engine.CaboAtual, Is.EqualTo(EstadoCaboPP.CircuitoAberto));
+            Assert.That(engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.EstadoA));
+            Assert.That(engine.EstaConectado, Is.False);
         }
 
         [TestCase(EstadoCaboPP.CircuitoAberto, "cabo 0")]
@@ -52,7 +58,7 @@ namespace DevSandbox.Tests
         }
 
         [Test]
-        public void DefinirCabo_DeveAtualizarPropriedadeEDispararEventos()
+        public void DefinirCabo_DeveAtualizarPropriedadeTransmitirEDispararEventos()
         {
             EstadoCaboPP? caboNotificado = null;
             string? comandoNotificado = null;
@@ -60,15 +66,17 @@ namespace DevSandbox.Tests
             _engine.CaboAlterado += (s, cabo) => caboNotificado = cabo;
             _engine.ComandoEnviado += (s, cmd) => comandoNotificado = cmd;
 
-            _engine.DefinirCabo(EstadoCaboPP.Cabo32A);
+            bool enviado = _engine.DefinirCabo(EstadoCaboPP.Cabo32A);
 
+            Assert.That(enviado, Is.True);
             Assert.That(_engine.CaboAtual, Is.EqualTo(EstadoCaboPP.Cabo32A));
             Assert.That(caboNotificado, Is.EqualTo(EstadoCaboPP.Cabo32A));
             Assert.That(comandoNotificado, Is.EqualTo("cabo 4"));
+            Assert.That(_serial.ComandosTransmitidos, Is.EqualTo(new[] { "cabo 4" }));
         }
 
         [Test]
-        public void DefinirEstado_DeveAtualizarPropriedadeEDispararEventos()
+        public void DefinirEstado_DeveAtualizarPropriedadeTransmitirEDispararEventos()
         {
             EstadoVeiculoCP? estadoNotificado = null;
             string? comandoNotificado = null;
@@ -76,8 +84,9 @@ namespace DevSandbox.Tests
             _engine.EstadoVeiculoAlterado += (s, estado) => estadoNotificado = estado;
             _engine.ComandoEnviado += (s, cmd) => comandoNotificado = cmd;
 
-            _engine.DefinirEstado(EstadoVeiculoCP.EstadoC);
+            bool enviado = _engine.DefinirEstado(EstadoVeiculoCP.EstadoC);
 
+            Assert.That(enviado, Is.True);
             Assert.That(_engine.EstadoAtual, Is.EqualTo(EstadoVeiculoCP.EstadoC));
             Assert.That(estadoNotificado, Is.EqualTo(EstadoVeiculoCP.EstadoC));
             Assert.That(comandoNotificado, Is.EqualTo("estado c"));
@@ -89,12 +98,86 @@ namespace DevSandbox.Tests
             string? comandoNotificado = null;
             _engine.ComandoEnviado += (s, cmd) => comandoNotificado = cmd;
 
-            _engine.EnviarComandoManual("   ");
+            Assert.That(_engine.EnviarComandoManual("   "), Is.False);
             Assert.That(comandoNotificado, Is.Null);
 
-            _engine.EnviarComandoManual("help");
+            Assert.That(_engine.EnviarComandoManual("  help "), Is.True);
             Assert.That(comandoNotificado, Is.EqualTo("help"));
+        }
+
+        [Test]
+        public void ComandoEnviado_NaoDeveDispararSemConexao()
+        {
+            _serial.EstaConectado = false;
+            int comandos = 0;
+            EstadoCaboPP? caboNotificado = null;
+            _engine.ComandoEnviado += (s, cmd) => comandos++;
+            _engine.CaboAlterado += (s, cabo) => caboNotificado = cabo;
+
+            bool enviado = _engine.DefinirCabo(EstadoCaboPP.Cabo20A);
+
+            Assert.That(enviado, Is.False);
+            Assert.That(comandos, Is.EqualTo(0));
+            Assert.That(_serial.ComandosTransmitidos, Is.Empty);
+            // A seleção local continua sendo registrada (o reenvio é decisão da UI)
+            Assert.That(_engine.CaboAtual, Is.EqualTo(EstadoCaboPP.Cabo20A));
+            Assert.That(caboNotificado, Is.EqualTo(EstadoCaboPP.Cabo20A));
+        }
+
+        [Test]
+        public void ComandoEnviado_NaoDeveDispararQuandoTransmissaoFalha()
+        {
+            _serial.FalharEnvio = true;
+            int comandos = 0;
+            _engine.ComandoEnviado += (s, cmd) => comandos++;
+
+            Assert.That(_engine.EnviarComandoManual("help"), Is.False);
+            Assert.That(_engine.DefinirEstado(EstadoVeiculoCP.EstadoB), Is.False);
+            Assert.That(comandos, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EventosDoSerial_DevemSerRepassados()
+        {
+            string? dados = null;
+            int perdas = 0, reconexoes = 0;
+            _engine.DadosRecebidos += (s, d) => dados = d;
+            _engine.ConexaoPerdida += (s, e) => perdas++;
+            _engine.Reconectado += (s, e) => reconexoes++;
+
+            _serial.SimularRecepcao("OK\r\n");
+            _serial.SimularDesconexao();
+            Assert.That(_engine.TentandoReconectar, Is.True);
+            _serial.SimularReconexao();
+
+            Assert.That(dados, Is.EqualTo("OK\r\n"));
+            Assert.That(perdas, Is.EqualTo(1));
+            Assert.That(reconexoes, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Dispose_DeveDesassinarHandlersEDescartarSerial()
+        {
+            Assert.That(_serial.TotalAssinantes, Is.EqualTo(3));
+
+            _engine.Dispose();
+
+            Assert.That(_serial.TotalAssinantes, Is.EqualTo(0));
+            Assert.That(_serial.Descartado, Is.True);
+            Assert.That(_engine.DefinirCabo(EstadoCaboPP.Cabo13A), Is.False);
+            Assert.DoesNotThrow(() => _engine.Dispose());
+        }
+
+        [Test]
+        public void Dispose_ComDescartarSerialFalse_NaoDeveDescartarSerial()
+        {
+            var serial = new FakeSerialEngine();
+            var engine = new BancadaEngine(serial, descartarSerial: false);
+
+            engine.Dispose();
+
+            Assert.That(serial.Descartado, Is.False);
+            Assert.That(serial.TotalAssinantes, Is.EqualTo(0));
         }
     }
 }
-

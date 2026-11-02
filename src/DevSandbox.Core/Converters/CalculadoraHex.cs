@@ -1,65 +1,51 @@
-using System;
 using System.Globalization;
 using System.Text;
 
 namespace DevSandbox.Core.Converters
 {
-    public class CalculadoraHex
+    /// <summary>
+    /// Conversões entre hexadecimal, decimal e binário em 64 bits (sem sinal na entrada).
+    /// </summary>
+    /// <remarks>
+    /// Convenção de entrada: espaços, tabs e <c>_</c> são separadores livres; <c>-</c> só é aceito como separador
+    /// entre dígitos (<c>FF-FF</c>, <c>1100-0011</c>). Sinal negativo é recusado com <see cref="FormatException"/>.
+    /// Entradas sem nenhum dígito (vazias, só prefixo ou só separadores) lançam <see cref="ArgumentException"/>.
+    /// </remarks>
+    public sealed class CalculadoraHex
     {
+        public const string MensagemNegativo =
+            "Valores negativos não são suportados. Forneça inteiros positivos ou hexadecimal sem sinal.";
+
+        public const string MensagemHifen =
+            "O hífen só é aceito como separador entre dígitos (ex.: FF-FF).";
+
         /// <summary>
-        /// Converte uma representação hexadecimal (com ou sem prefixo '0x'/'0X', suportando separadores como espaços ou underscores) para decimal (64 bits).
-        /// Suporta valores de 64 bits completos (0x0 até 0xFFFFFFFFFFFFFFFF).
+        /// Converte uma representação hexadecimal (com ou sem prefixo '0x'/'0X', com separadores) para decimal (64 bits).
+        /// Suporta valores de 64 bits completos (0x0 até 0xFFFFFFFFFFFFFFFF; acima de 0x7FFF... o resultado é negativo em complemento de dois).
         /// </summary>
         public long HexParaDecimal(string hex)
         {
-            if (string.IsNullOrWhiteSpace(hex))
-            {
-                throw new ArgumentException("O valor hexadecimal não pode ser vazio.", nameof(hex));
-            }
+            string digitos = Normalizar(hex, "0x", "hexadecimal", nameof(hex));
 
-            string normalizado = hex.Trim().Replace(" ", "").Replace("_", "").Replace("-", "");
-            if (normalizado.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
-                normalizado = normalizado.Substring(2);
-            }
-
-            if (string.IsNullOrWhiteSpace(normalizado))
-            {
-                throw new ArgumentException("O valor hexadecimal não contém dígitos válidos.", nameof(hex));
-            }
-
-            ulong valorUnsigned = ulong.Parse(normalizado, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            ulong valorUnsigned = ulong.Parse(digitos, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
             return unchecked((long)valorUnsigned);
         }
 
         /// <summary>
-        /// Converte uma representação binária (com ou sem prefixo '0b'/'0B', suportando espaços e underscores) para decimal (64 bits).
+        /// Converte uma representação binária (com ou sem prefixo '0b'/'0B', com separadores) para decimal (64 bits).
         /// </summary>
         public long BinarioParaDecimal(string binario)
         {
-            if (string.IsNullOrWhiteSpace(binario))
-            {
-                throw new ArgumentException("O valor binário não pode ser vazio.", nameof(binario));
-            }
+            string digitos = Normalizar(binario, "0b", "binário", nameof(binario));
 
-            string normalizado = binario.Trim().Replace(" ", "").Replace("_", "").Replace("-", "");
-            if (normalizado.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
-            {
-                normalizado = normalizado.Substring(2);
-            }
-
-            if (string.IsNullOrWhiteSpace(normalizado))
-            {
-                throw new ArgumentException("O valor binário não contém dígitos válidos.", nameof(binario));
-            }
-
-            if (normalizado.Length > 64)
+            // Zeros à esquerda não contam para o limite de 64 bits
+            if (digitos.TrimStart('0').Length > 64)
             {
                 throw new OverflowException("O valor binário excede o limite de 64 bits.");
             }
 
             ulong resultado = 0;
-            foreach (char c in normalizado)
+            foreach (char c in digitos)
             {
                 if (c != '0' && c != '1')
                 {
@@ -70,6 +56,72 @@ namespace DevSandbox.Core.Converters
 
             return unchecked((long)resultado);
         }
+
+        /// <summary>
+        /// Converte uma representação decimal sem sinal (0 até 18446744073709551615, com separadores) para 64 bits.
+        /// Valores acima de <see cref="long.MaxValue"/> resultam negativos em complemento de dois.
+        /// </summary>
+        public long DecimalParaLong(string dec)
+        {
+            string digitos = Normalizar(dec, null, "decimal", nameof(dec));
+
+            ulong valorUnsigned = ulong.Parse(digitos, NumberStyles.None, CultureInfo.InvariantCulture);
+            return unchecked((long)valorUnsigned);
+        }
+
+        /// <summary>
+        /// Detecta a base da entrada: prefixo '0x' → hexadecimal; prefixo '0b' → binário;
+        /// presença de letras A–F → hexadecimal; caso contrário → decimal.
+        /// </summary>
+        public BaseNumerica DetectarBase(string entrada)
+        {
+            if (string.IsNullOrWhiteSpace(entrada))
+            {
+                throw new ArgumentException("Digite um valor para converter.", nameof(entrada));
+            }
+
+            // O sinal é ignorado na detecção; a conversão é que recusa negativos com mensagem clara.
+            string texto = entrada.Trim().TrimStart('-');
+
+            if (texto.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) return BaseNumerica.Hexadecimal;
+            // "0b" só é prefixo binário se o resto for apenas 0/1 e separadores; "0BAD" e "0B12" são hexadecimais
+            if (texto.StartsWith("0b", StringComparison.OrdinalIgnoreCase) && ApenasBitsESeparadores(texto.AsSpan(2)))
+                return BaseNumerica.Binario;
+
+            foreach (char c in texto)
+            {
+                if (char.IsAsciiHexDigit(c) && !char.IsAsciiDigit(c)) return BaseNumerica.Hexadecimal;
+            }
+
+            return BaseNumerica.Decimal;
+        }
+
+        private static bool ApenasBitsESeparadores(ReadOnlySpan<char> resto)
+        {
+            foreach (char c in resto)
+            {
+                if (c is not ('0' or '1' or '-' or '_') && !char.IsWhiteSpace(c)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Detecta a base da entrada (<see cref="DetectarBase"/>) e converte para 64 bits.
+        /// </summary>
+        public long ConverterEntrada(string entrada, out BaseNumerica baseDetectada)
+        {
+            baseDetectada = DetectarBase(entrada);
+            return Converter(entrada, baseDetectada);
+        }
+
+        /// <summary>Converte a entrada na base informada.</summary>
+        public long Converter(string entrada, BaseNumerica baseNumerica) => baseNumerica switch
+        {
+            BaseNumerica.Hexadecimal => HexParaDecimal(entrada),
+            BaseNumerica.Binario => BinarioParaDecimal(entrada),
+            BaseNumerica.Decimal => DecimalParaLong(entrada),
+            _ => throw new ArgumentOutOfRangeException(nameof(baseNumerica), baseNumerica, "Base numérica desconhecida.")
+        };
 
         /// <summary>
         /// Converte uma representação binária diretamente para hexadecimal maiúsculo.
@@ -85,7 +137,7 @@ namespace DevSandbox.Core.Converters
         /// </summary>
         public string DecimalParaHex(long valor)
         {
-            return valor.ToString("X");
+            return valor.ToString("X", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -127,6 +179,49 @@ namespace DevSandbox.Core.Converters
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// Aplica a convenção de entrada e devolve apenas os dígitos (sem prefixo e sem separadores).
+        /// A validação dos dígitos em si fica com o conversor de cada base.
+        /// </summary>
+        private static string Normalizar(string entrada, string? prefixo, string nomeBase, string nomeParametro)
+        {
+            if (string.IsNullOrWhiteSpace(entrada))
+            {
+                throw new ArgumentException($"O valor {nomeBase} não pode ser vazio.", nomeParametro);
+            }
+
+            // Espaços em branco (inclusive tab) e '_' são separadores livres
+            string texto = string.Concat(entrada.Trim().Where(c => c != '_' && !char.IsWhiteSpace(c)));
+
+            // Sinal antes do prefixo ("-0xFF", "-FF")
+            int hifensIniciais = texto.Length - texto.TrimStart('-').Length;
+            string corpo = texto.Substring(hifensIniciais);
+
+            if (prefixo != null && corpo.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))
+            {
+                corpo = corpo.Substring(prefixo.Length);
+            }
+
+            // Sinal depois do prefixo ("0x-FF", "0b-1010")
+            int hifensAposPrefixo = corpo.Length - corpo.TrimStart('-').Length;
+
+            if (corpo.Replace("-", "").Length == 0)
+            {
+                throw new ArgumentException($"O valor {nomeBase} não contém dígitos válidos.", nomeParametro);
+            }
+
+            if (hifensIniciais + hifensAposPrefixo == 1)
+            {
+                throw new FormatException(MensagemNegativo);
+            }
+
+            if (hifensIniciais + hifensAposPrefixo > 1 || corpo.EndsWith('-') || corpo.Contains("--", StringComparison.Ordinal))
+            {
+                throw new FormatException(MensagemHifen);
+            }
+
+            return corpo.Replace("-", "");
+        }
     }
 }
-
