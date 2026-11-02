@@ -1,127 +1,117 @@
-# Guia de Simulação — Bancada de Testes EVSE (IEC 61851-1 / IEC 62196-2) no SimulIDE 2.0
+# Guia de Simulação — Bancada de Testes EVSE (IEC 61851-1 / IEC 62196-2) no SimulIDE 1.1.0-SR2
 
-Este guia orienta a integração e os ensaios virtuais completos da **Bancada de Testes de Veículo Elétrico** no **SimulIDE 2.0** com o aplicativo desktop **.NET 10** (*Bancada de Testes EVSE*), contemplando tanto a emulação de cabos **PP** (Proximity Pilot) quanto os 11 estados do piloto de controle **CP** (Control Pilot: AX, BX+, BX, BX-, CX+, CX, CX-, DX+, DX, DX- e E).
+Este guia mostra como simular a **Bancada de Testes de Veículo Elétrico** (Arduino Mega 2560 + firmware FreeRTOS `firmware/Bancada`) no **SimulIDE 1.1.0-SR2** e como ligá-la ao aplicativo desktop **.NET 10** (*Bancada de Testes EVSE*). O circuito reproduz a **placa real** (esquemático EasyEDA `bancada_de_teste_reles_corrigido`, 2026-10-09): o emulador do cabo (**PP**) e os 11 estados do piloto de controle (**CP**: AX, BX+, BX, BX-, CX+, CX, CX-, DX+, DX, DX- e E).
+
+> [!WARNING] Versão do simulador: use o **SimulIDE 1.1.0-SR2**
+> `C:\Users\italo\Downloads\SimulIDE_1.1.0-SR2_Win64\SimulIDE_1.1.0-SR2_Win64\simulide.exe`.
+> No SimulIDE 2.0 (R260501) o firmware dá boot, mas a CLI trava ao responder (FreeRTOS + recepção + transmissão serial). Captura: `capturas/simulide20_cli_travada_freertos_serial.png`.
 
 ---
 
-## 🌐 1. Topologia de Conexão Virtual (COM1 ↔ COM2)
+## 📁 1. Arquivos
+
+| Arquivo | Uso |
+| :--- | :--- |
+| **`circuito_bancada_mega_placa.sim1`** | **Padrão.** Estação do CP em **+12 V DC + 1 kΩ**, para ler o nível de cada estado no voltímetro `V_CP`. |
+| `circuito_bancada_mega_placa_pwm.sim1` | Mesmo circuito com a estação em **PWM ±12 V, 1 kHz** (Wave Generator), para ver a forma de onda no osciloscópio. O voltímetro mostra uma média, não o nível. |
+| `circuito_bancada_mega.sim1` | Versão editada pelo usuário (mantida; não é a referência da placa). |
+| `circuito_bancada_teste.sim1` | Legado (Arduino Uno, só PP). |
+| `capturas/` | Provas: recortes do esquemático (`esquematico_*.png`), circuito aberto/ligado, tensões medidas. |
+
+O `.hex` é carregado por caminho relativo: `../../firmware/Bancada/.pio/build/megaatmega2560/firmware.hex`.
+
+---
+
+## 🌐 2. Topologia de Conexão Virtual (COM1 ↔ COM2)
 
 ```text
-[ Aplicativo Desktop .NET 10 ]  <--->  ( COM2 )  <=== [Túnel Virtual] ===>  ( COM1 )  <--->  [ SimulIDE 2.0: BRIDGE_COM1 ]
-    (Selecionar COM2)                                                                           (Arduino Mega 2560 FreeRTOS)
+[ Aplicativo .NET 10 ] <---> ( COM2 ) <=== [ par virtual HHD Bridged Serial ] ===> ( COM1 ) <---> [ SimulIDE: BRIDGE_COM1 ] <---> Mega D0/D1
 ```
-
-O circuito virtual (`circuito_bancada_mega.sim1`) integra:
-1. **Microcontrolador Arduino Mega 2560 (`Mega-1`):** Executa o firmware multitarefa FreeRTOS com autocarregamento do binário `.hex`;
-2. **Ponte Serial UART (`BRIDGE_COM1`):** Conectada aos pinos RX0/TX0 do Mega e associada à porta virtual `COM1` a 9600 bps (8-N-1);
-3. **Barramento do Cabo PP (IEC 62196-2):**
-   - 6 MOSFETs 2N7002 ($Q_1$ a $Q_6$) acionados pelos pinos **D4 a D9**;
-   - Barramento resistivo calibrado ($4700\,\Omega$, $1500\,\Omega$, $680\,\Omega$, $220\,\Omega$, $100\,\Omega$ e $47\,\Omega$);
-   - Circuito de detecção da estação EVSE: Fonte de $+5\text{ V}$ com resistor de pull-up $R_{PU} = 470\,\Omega$;
-   - **Voltímetro Probe (`V_PP`):** Exibe a tensão analógica exata no pino PP.
-4. **Barramento do Piloto de Controle CP (IEC 61851-1 Anexo A):**
-   - 10 Relés SPST de 5V acionados pelos pinos **D22 a D31** com proteção *Break-Before-Make*;
-   - Circuito de alimentação da estação EVSE: Fonte de $+12\text{ V}$ e resistor interno $R_1 = 1000\,\Omega$;
-   - Diodo retificador veicular `1N4148`;
-   - Chave $S_7$ (D22) de conexão com Terra de Proteção (PE);
-   - Chave $S_8$ (D23) de simulação de falha direta de linha ($120\,\Omega$ antes do diodo);
-   - Barramentos resistivos para os Estados B ($2740\,\Omega$), C ($882\,\Omega$ equiv.) e D ($245\,\Omega$ equiv.) com derivações de tolerância;
-   - **Voltímetro Probe (`V_CP`):** Exibe a tensão analógica do sinal de controle piloto em tempo real;
-5. **Painel de Sinalização Visual:**
-   - Barra de 8 LEDs (`PP_STATUS`): Monitora os canais D4..D9 do cabo e o *Heartbeat* do FreeRTOS em D13;
-   - Barra de 10 LEDs (`CP_RELAYS`): Monitora o acionamento em tempo real dos relés D22..D31.
-
-> [!NOTE] Preservação do Circuito Legado (`circuito_bancada_teste.sim1`):
-> O arquivo `circuito_bancada_teste.sim1` é mantido na pasta para fins de histórico e compatibilidade com simulações antigas do **Arduino Uno**. No Uno, apenas o barramento PP (D4..D9) é emulado, pois o microcontrolador ATmega328P não possui os pinos digitais D22..D31 requeridos para o controle CP.
 
 ---
 
-## 🛠️ 2. Passo a Passo de Execução e Ensaios
+## 🔌 3. O que o circuito contém
 
-### Passo 1: Compilar o Firmware para o Arduino Mega 2560
-No terminal da raiz do projeto (`firmware/Bancada`):
-```powershell
-cd firmware/Bancada
-pio run -e megaatmega2560
-```
-O PlatformIO compilará o firmware gerando o artefato em:
-`firmware/Bancada/.pio/build/megaatmega2560/firmware.hex`.
+1. **Arduino Mega 2560 (`Mega-1`)** com o firmware e a ponte **`BRIDGE_COM1`** (COM1, 9600 8-N-1) em D0/D1; GND no `GND0`.
+2. **PP (IEC 62196-2):** 6 MOSFETs 2N7002 (gate 220 Ω + pull-down 10 kΩ) em D4..D9 com 4k7 / 1500 / 680 / 220 / 100 / 47 Ω até o PE; estação da **Fig. 5 do PDF 075: 3,3 V com 470 Ω**; voltímetro **`V_PP`**; barra de LEDs `PP_STATUS` (D4..D9 e D13).
+3. **CP (IEC 61851-1 Anexo A), igual à placa:**
+   - estação +12 V DC (ou PWM ±12 V) → **1 kΩ** → nó **CP** → diodo **D11 (1N4148)** → nó **CPV**; voltímetro **`V_CP`** no nó CP;
+   - os **23 resistores individuais** do esquemático: ramo B = R30 1870, R31 910, R32 10, R33 1k8, R34 20; ramo C = R41 2, R40 30, R39 390, R38 390, R37 2, R35 820, R36 75, R42 13, R43 1; ramo D = R48 160, R49 10, R50 3, R45 3, R46 2, R51 130, R47 130, R44 10; falha R29 120;
+   - **10 relés** (`RelaySPST`; os seletores são SPDT, `DT=true`: `switch1pinN` = NC, `switch0pinN` = NO), bobina ligada direto ao pino do Mega (o driver S8050 + 1 kΩ + 1N4007 da placa foi omitido; o relé do SimulIDE aciona com 20 mA).
+4. **Osciloscópio:** CH1 = PP, CH2 = CP.
 
-### Passo 2: Criar o Par de Portas Seriais Virtuais no Windows
-1. Abra o utilitário **Virtual Serial Port Tools** (ou software de emulação serial equivalente);
-2. Crie um par de portas virtuais conectadas entre si: **`COM1 ↔ COM2`**;
-3. Inicie o serviço de tunelamento.
+As ligações usam **Tunnels nomeados**: as redes (`CP`, `CPV`, `RET`, `FALHA`, `BSEL`, `B_NOM`, `B_INF`, `CDC`, `CT`, `DT`, `CSEL`, `C_NOM`, `C_INF`, `DSEL`, `D_NOM`, `D_INF`, `PP`) e as bobinas (`D22`..`D31`). **Para trocar a pinagem de um relé, basta renomear o Tunnel da bobina.**
 
-### Passo 3: Abrir e Ligar o Circuito no SimulIDE 2.0
-1. Execute o **SimulIDE 2.0** (`C:\Users\italo\Downloads\SimulIDE_2-R260501_Win64\SimulIDE_2-R260501_Win64\simulide.exe`);
-2. Pressione `Ctrl + O` e abra o circuito:
-   ```text
-   simulacao/Bancada/circuito_bancada_mega.sim1
+### 3.1. Relés do CP (placa EasyEDA)
+
+Cada ramo é uma árvore **habilita (EN) + seletor (SEL)**: o EN (C-NO) leva o nó ao comum do SEL, cujo NC vai ao tap nominal e o NO ao tap inferior.
+
+| Pino | Relé | Função | Comum → NO / NC |
+| :---: | :---: | :--- | :--- |
+| D30 | RLY6 | K_PE (S7): conecta o veículo ao PE | RET → PE |
+| D31 | RLY1 | K_FALHA (S8): falha 120 Ω antes do diodo | CP → FALHA (R29) |
+| D29 | RLY7 | K_B_EN: habilita o bypass do ramo B | CPV → BSEL |
+| D28 | RLY2 | K_B_SEL: seletor B | BSEL → B_INF / B_NOM |
+| D27 | RLY5 | K_CD_EN: habilita a carga | CPV → CDC |
+| D26 | RLY8 | K_CD_SEL: seletor de ramo | CDC → DT (ramo D) / CT (ramo C) |
+| D25 | RLY3 | K_C_EN: habilita o bypass do ramo C | CT → CSEL |
+| D24 | RLY4 | K_C_SEL: seletor C | CSEL → C_INF / C_NOM |
+| D23 | RLY9 | K_D_EN: habilita o bypass do ramo D | DT → DSEL |
+| D22 | RLY10 | K_D_SEL: seletor D | DSEL → D_INF / D_NOM |
+
+---
+
+## 🛠️ 4. Passo a Passo
+
+1. **Compilar o firmware** (na raiz do repositório):
+   ```powershell
+   C:\Users\italo\.platformio\penv\Scripts\pio.exe run -d firmware\Bancada -e megaatmega2560
    ```
-3. Clique no botão vermelho de energia **Power Circuit** (topo esquerdo da barra de ferramentas);
-4. O SimulIDE se conectará automaticamente à porta **`COM1`** e o **LED D13 (Heartbeat)** começará a piscar com cadência de 500 ms;
-5. Inicialmente, o voltímetro **`V_PP`** exibirá **`5.00 V`** (circuito aberto) e o voltímetro **`V_CP`** exibirá **`12.00 V`** (Estado AX Nominal — veículo desconectado).
+2. **Par serial virtual:** no *Virtual Serial Port Tools* (HHD), o par `COM1 ↔ COM2` deve estar ativo.
+3. **Abrir** o `simulide.exe` do **1.1.0-SR2** → `Ctrl+O` → `simulacao/Bancada/circuito_bancada_mega_placa.sim1` → botão **Power Circuit**. O console mostra `Firmware successfully loaded` e `Connected to COM1`; `V_PP` = **3,300 V** e `V_CP` = **12,00 V** (AX).
+4. **Aplicativo:** em *Bancada de Testes EVSE*, porta **COM2**, **9600**, **Conectar**.
 
-### Passo 4: Conectar o Aplicativo Desktop .NET 10
-1. Inicie a aplicação **DevSandbox** (ou o executável standalone da Bancada);
-2. Navegue até a tela **Bancada de Testes EVSE**;
-3. No seletor **PORTA SERIAL**, escolha **`COM2`**;
-4. No seletor **BAUD RATE**, mantenha **`9600`**;
-5. Clique em **Conectar**. O indicador ficará verde (*Conectado*).
+**Sem o aplicativo:** troque o `SerialPort` por um **Serial Terminal** (*Peripherals*) ligado a D0/D1. Digite o comando em *Send Text* e envie o valor **10** em *Send Value* (o firmware só processa a linha no `\n`).
 
 ---
 
-## 📊 3. Tabela de Estados e Respostas Esperadas nos Voltímetros
+## 📊 5. Tensões medidas (SimulIDE 1.1.0-SR2, firmware via serial)
 
-### 3.1. Ensaio do Pino de Proximidade (PP — IEC 62196-2)
+### 5.1. PP (estação 3,3 V + 470 Ω)
 
-| Opção no Aplicativo / Comando CLI | Resistor ($R_{PP}$) | LED Ativo | Corrente Máxima | Tensão no Voltímetro ($V_{PP}$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **0: Circuito Aberto** (`cabo 0`) | $\infty$ (Aberto) | Nenhum | 0 A | **$5{,}00\text{ V}$** |
-| **1: Desconectado** (`cabo 1`) | $4700\,\Omega$ | **LED 0** (`D4`) | 0 A | **$\approx 4{,}54\text{ V}$** |
-| **2: Cabo 13 A** (`cabo 2`) | $1500\,\Omega$ | **LED 1** (`D5`) | **13 A** | **$\approx 3{,}80\text{ V}$** |
-| **3: Cabo 20 A** (`cabo 3`) | $680\,\Omega$ | **LED 2** (`D6`) | **20 A** | **$\approx 2{,}95\text{ V}$** |
-| **4: Cabo 32 A** (`cabo 4`) | $220\,\Omega$ | **LED 3** (`D7`) | **32 A** | **$\approx 1{,}59\text{ V}$** |
-| **5: Cabo 63 A** (`cabo 5`) | $100\,\Omega$ | **LED 4** (`D8`) | **63 A** | **$\approx 0{,}87\text{ V}$** |
-| **6: Falha / Curto** (`cabo 6`) | $47\,\Omega$ | **LED 5** (`D9`) | 0 A | **$\approx 0{,}45\text{ V}$** |
+| Comando | Resistor | $V_{PP}$ calculado | $V_{PP}$ medido |
+| :--- | :---: | :---: | :---: |
+| `cabo 0` | aberto | 3,30 V | **3,300 V** |
+| `cabo 1` | 4700 Ω | 3,00 V | — |
+| `cabo 2` | 1500 Ω | 2,51 V | — |
+| `cabo 3` | 680 Ω | 1,95 V | **1,958 V** |
+| `cabo 4` | 220 Ω | 1,06 V | — |
+| `cabo 5` | 100 Ω | 0,59 V | — |
+| `cabo 6` | 47 Ω | 0,31 V | **0,335 V** |
 
----
+### 5.2. CP (estação +12 V DC + 1 kΩ)
 
-### 3.2. Ensaio do Piloto de Controle (CP — IEC 61851-1 Anexo A)
+| Comando | Relés energizados | Tabela II | $V_{CP}$ medido |
+| :--- | :--- | :---: | :---: |
+| `estado ax` | nenhum | 12 V | **12,00 V** |
+| `estado bx+` | D30 | 9,95 V | **9,928 V** |
+| `estado bx` | D30 D29 | 8,92 V | **8,899 V** |
+| `estado bx-` | D30 D29 D28 | 7,92 V | **7,892 V** |
+| `estado cx+` | D30 D29 D27 | 6,93 V | **6,380 V** |
+| `estado cx` | D30 D29 D27 D25 | 5,92 V | **5,858 V** |
+| `estado cx-` | D30 D29 D27 D25 D24 | 4,90 V | **5,133 V** |
+| `estado dx+` | D30 D29 D27 D26 | 3,91 V | **3,666 V** |
+| `estado dx` | D30 D29 D27 D26 D23 | 2,91 V | **2,740 V** |
+| `estado dx-` | D30 D29 D27 D26 D23 D22 | 1,96 V | **1,825 V** |
+| `estado e` | D30 D31 | 0,97 V | **1,263 V** |
 
-| Estado CP / Comando CLI | Condição Operacional | Relés Fechados | Tensão Teórica | Tensão no Voltímetro ($V_{CP}$) |
-| :--- | :--- | :--- | :---: | :---: |
-| **`estado ax`** | Veículo não conectado (Desconectado) | Nenhum (S7 aberto) | $+12\text{ V}$ | **$12{,}00\text{ V}$** |
-| **`estado bx+`** | Veículo conectado (Standby) — Limite Superior | S7 (D22) | $+10\text{ V}$ | **$\approx 9{,}95\text{ V}$** |
-| **`estado bx`** | Veículo conectado (Standby) — **Nominal** | S7 (D22), S9.1 (D24) | $+9\text{ V}$ | **$\approx 8{,}92\text{ V}$** |
-| **`estado bx-`** | Veículo conectado (Standby) — Limite Inferior | S7 (D22), S9.2 (D25) | $+8\text{ V}$ | **$\approx 7{,}92\text{ V}$** |
-| **`estado cx+`** | Carga sem ventilação — Limite Superior | S7 (D22), S9.1 (D24), S10.2 (D26) | $+7\text{ V}$ | **$\approx 6{,}93\text{ V}$** |
-| **`estado cx`** | Carga sem ventilação — **Nominal** | S7, S9.1, S10.2, S11.1 (D28) | $+6\text{ V}$ | **$\approx 5{,}92\text{ V}$** |
-| **`estado cx-`** | Carga sem ventilação — Limite Inferior | S7, S9.1, S10.2, S11.2 (D29) | $+5\text{ V}$ | **$\approx 4{,}90\text{ V}$** |
-| **`estado dx+`** | Carga com ventilação — Limite Superior | S7 (D22), S9.1 (D24), S10.1 (D27) | $+4\text{ V}$ | **$\approx 3{,}91\text{ V}$** |
-| **`estado dx`** | Carga com ventilação — **Nominal** | S7, S9.1, S10.1, S12.1 (D30) | $+3\text{ V}$ | **$\approx 2{,}91\text{ V}$** |
-| **`estado dx-`** | Carga com ventilação — Limite Inferior | S7, S9.1, S10.1, S12.2 (D31) | $+2\text{ V}$ | **$\approx 1{,}96\text{ V}$** |
-| **`estado e`** | Falha: Curto-circuito CP-PE antes do diodo | S7 (D22), S8 (D23) | $+1\text{ V}$ | **$\approx 0{,}97\text{ V}$** |
+Os desvios em C, D e E vêm da rede da placa e do modelo de diodo do simulador, não do firmware:
+- **CX+:** o ramo C sem bypass (1723 Ω) fica em paralelo com o B nominal (2740 Ω) = 1058 Ω, o que dá ~6,4 V.
+- **E:** o R29 fica **antes** do diodo: 12 × 120 / 1120 ≈ 1,29 V, fora da janela 0 ± 1 V.
+- **Demais (diodo):** o `Diode Default` do SimulIDE tem queda menor que a do 1N4148 real nas correntes de C/D.
+- **Contatos:** a resistência dos contatos do relé é desprezível frente aos resistores.
 
----
+Provas: `capturas/firmware_ponta_a_ponta_11_estados_e_PP.png` e `capturas/camada_c_VCP_11_estados_painel.png`.
 
-## 🔧 4. Mapeamento de Pinos no Arduino Mega 2560
-
-- **`D0 (RX0)` / `D1 (TX0)`:** Conexão UART com a ponte `BRIDGE_COM1` (9600 baud, 8-N-1);
-- **`D4`:** MOSFET $Q_1$ $\rightarrow$ Resistor $4700\,\Omega$ (PP Desconectado);
-- **`D5`:** MOSFET $Q_2$ $\rightarrow$ Resistor $1500\,\Omega$ (PP 13 A);
-- **`D6`:** MOSFET $Q_3$ $\rightarrow$ Resistor $680\,\Omega$ (PP 20 A);
-- **`D7`:** MOSFET $Q_4$ $\rightarrow$ Resistor $220\,\Omega$ (PP 32 A);
-- **`D8`:** MOSFET $Q_5$ $\rightarrow$ Resistor $100\,\Omega$ (PP 63 A);
-- **`D9`:** MOSFET $Q_6$ $\rightarrow$ Resistor $47\,\Omega$ (PP Falha/Curto);
-- **`D13`:** LED Onboard / Heartbeat do FreeRTOS (500 ms);
-- **`D22`:** Relé $S_7$ $\rightarrow$ Conexão do circuito veicular ao Terra de Proteção (PE);
-- **`D23`:** Relé $S_8$ $\rightarrow$ Ramo de falha $120\,\Omega$ direto para PE antes do diodo;
-- **`D24`:** Relé $S_{9.1}$ $\rightarrow$ Bypass no barramento B (BX Nominal, 9 V);
-- **`D25`:** Relé $S_{9.2}$ $\rightarrow$ Bypass no barramento B (BX Limite Inferior, 8 V);
-- **`D26`:** Relé $S_{10.2}$ ($S_{10\_C}$) $\rightarrow$ Habilita o barramento de carga C;
-- **`D27`:** Relé $S_{10.1}$ ($S_{10\_D}$) $\rightarrow$ Habilita o barramento de carga D;
-- **`D28`:** Relé $S_{11.1}$ $\rightarrow$ Bypass no barramento C (CX Nominal, 6 V);
-- **`D29`:** Relé $S_{11.2}$ $\rightarrow$ Bypass no barramento C (CX Limite Inferior, 5 V);
-- **`D30`:** Relé $S_{12.1}$ $\rightarrow$ Bypass no barramento D (DX Nominal, 3 V);
-- **`D31`:** Relé $S_{12.2}$ $\rightarrow$ Bypass no barramento D (DX Limite Inferior, 2 V).
+> [!CAUTION] Limitação conhecida do simulador
+> Respostas **longas** do firmware (`estado status`, `cabo status`, `help`) travam o MCU simulado após 1–2 bytes também no 1.1.0-SR2. Um firmware mínimo de teste (FreeRTOS + leitura da RX + escrita longa) reproduz o problema, e um sketch sem FreeRTOS não. Respostas curtas (`OK`, `ERRO…`) funcionam. Captura: `capturas/simulide11_estado_status_trava_FreeRTOS_TX.png`. Para recuperar, desligue e ligue a simulação.

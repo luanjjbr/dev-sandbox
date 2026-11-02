@@ -55,24 +55,24 @@ Comandos sem diferença de maiúsculas/minúsculas e tolerantes a espaços. Linh
 | `cabo <inválido>` | `ERRO: Cabo` |
 
 ### Pino CP — estado do veículo (IEC 61851-1 Anexo A), somente Mega
-| Comando | Estado | V<sub>CP</sub> | Relés fechados |
+| Comando | Estado | V<sub>CP</sub> | Relés energizados (pino) |
 | :--- | :--- | :---: | :--- |
 | `estado ax` (ou `a`) | AX — não conectado | 12 V | nenhum |
-| `estado bx+` | BX limite superior | 10 V | S7 |
-| `estado bx` (ou `b`) | BX nominal | 9 V | S7, S9.1 |
-| `estado bx-` | BX limite inferior | 8 V | S7, S9.2 |
-| `estado cx+` | CX limite superior | 7 V | S7, S9.1, S10.2 |
-| `estado cx` (ou `c`) | CX nominal | 6 V | S7, S9.1, S10.2, S11.1 |
-| `estado cx-` | CX limite inferior | 5 V | S7, S9.1, S10.2, S11.2 |
-| `estado dx+` | DX limite superior | 4 V | S7, S9.1, S10.1 |
-| `estado dx` (ou `d`) | DX nominal | 3 V | S7, S9.1, S10.1, S12.1 |
-| `estado dx-` | DX limite inferior | 2 V | S7, S9.1, S10.1, S12.2 |
-| `estado e` | E — falha / curto CP-PE | 1 V | S7, S8 |
+| `estado bx+` | BX limite superior | 10 V | D30 |
+| `estado bx` (ou `b`) | BX nominal | 9 V | D30, D29 |
+| `estado bx-` | BX limite inferior | 8 V | D30, D29, D28 |
+| `estado cx+` | CX limite superior | 7 V | D30, D29, D27 |
+| `estado cx` (ou `c`) | CX nominal | 6 V | D30, D29, D27, D25 |
+| `estado cx-` | CX limite inferior | 5 V | D30, D29, D27, D25, D24 |
+| `estado dx+` | DX limite superior | 4 V | D30, D29, D27, D26 |
+| `estado dx` (ou `d`) | DX nominal | 3 V | D30, D29, D27, D26, D23 |
+| `estado dx-` | DX limite inferior | 2 V | D30, D29, D27, D26, D23, D22 |
+| `estado e` | E — falha / curto CP-PE | 1 V | D30, D31 |
 
 - Respostas: `OK`; argumento inválido → `ERRO: Estado`; no Nano, qualquer `estado …` → `ERRO: CP indisponivel no Nano`.
-- `estado status` → `[STATUS CP] Estado: CX | Vcp: 6 V | <descrição> | Reles: S7 S9.1 S10.2 S11.1`.
-- S10.2 (D26) habilita o ramo C; **S10.1 (D27) habilita o ramo D e corresponde ao "S10.0" da Tabela II**.
-- **Troca de estado (*break-before-make*):** abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` (20 ms; ~32–48 ms reais com o tick de ~16 ms do FreeRTOS) e fecha só os que entram. A pausa só ocorre quando algum relé sai e outro entra; trocas que só fecham (ex.: AX → BX) ou só abrem (ex.: CX → CX+) são imediatas. O intermediário é a interseção dos dois estados: entre estados conectados ele sempre mantém S7 (nunca passa por AX) e nunca tem S8 nem os ramos C e D juntos, o que é provado por `static_assert` em `lib/EmuladorVeiculoCP/TabelaEstadosCP.cpp`. Reenviar o estado atual é *no-op*: o firmware não reescreve os relés. Para reaplicá-los (ex.: depois de um brown-out só no módulo de relés), mande `estado ax` e depois o estado desejado.
+- `estado status` → `[STATUS CP] Estado: CX | Vcp: 6 V | <descrição> | Reles: D30 D29 D27 D25` (relés listados pelo pino da placa).
+- Pinagem da **placa real** (EasyEDA): D30 = PE (S7), D31 = falha 120 Ω (S8); cada ramo é uma árvore habilita + seletor (D29/D28 ramo B, D27 carga + D26 seletor C/D, D25/D24 ramo C, D23/D22 ramo D). Detalhes em [docs/pinout.md](docs/pinout.md).
+- **Troca de estado (*break-before-make*):** abre só os relés que saem, aguarda no mínimo `TEMPO_BREAK_BEFORE_MAKE_CP_MS` (20 ms; ~32–48 ms reais com o tick de ~16 ms do FreeRTOS) e fecha só os que entram. A pausa só ocorre quando algum relé sai e outro entra; trocas que só fecham (ex.: AX → BX) ou só abrem (ex.: CX → CX+) são imediatas. O intermediário é a interseção dos dois estados: entre estados conectados ele sempre mantém D30/S7 (nunca passa por AX), nunca tem D31/S8 e é sempre uma combinação coerente da árvore de relés (seletor só com o seu habilita; C e D nunca juntos, pois D26 é SPDT), o que é provado por `static_assert` em `lib/EmuladorVeiculoCP/TabelaEstadosCP.cpp`. Reenviar o estado atual é *no-op*: o firmware não reescreve os relés. Para reaplicá-los (ex.: depois de um brown-out só no módulo de relés), mande `estado ax` e depois o estado desejado.
 - **Boot seguro:** todos os relés do CP e as chaves do PP são abertos no `setup()`, antes das tasks.
 
 ### Outros

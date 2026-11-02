@@ -24,40 +24,42 @@ Este documento detalha o mapeamento de pinos e as conexões elétricas para os m
 
 ## 2. Emulador do Pino CP (Control Pilot — IEC 61851-1 Anexo A)
 
-Mapeamento dos 10 relés de 5V (placa de relés com driver NPN S8050 ou módulo de relés comercial) no **Arduino Mega 2560**:
+Mapeamento dos 10 relés SRD-05VDC-SL-C da **placa real** (esquemático EasyEDA `bancada_de_teste_reles_corrigido`, 2026-10-09) no **Arduino Mega 2560**. Driver de cada relé: `Dxx` → 1 kΩ → NPN S8050 (com 1N4007 na bobina), ativo em `HIGH`. Recortes do esquemático que provam cada linha: `simulacao/Bancada/capturas/esquematico_*.png`.
 
-| Identificação do Sinal | Pino Mega 2560 | Tipo de I/O | Função no Firmware / Ensaio de Norma | Estado / Tolerância Emulada |
+Cada ramo é uma **árvore "habilita + seletor"**: o relé habilita (EN, contato C-NO) leva o nó ao comum do relé seletor (SEL), cujo **NC** vai ao tap nominal e o **NO** ao tap inferior. O seletor só atua com o seu habilita ligado.
+
+| Identificação do Sinal | Pino Mega | Relé | Função (nome da Tabela II) | Contatos usados |
 | :--- | :---: | :---: | :--- | :--- |
-| **`PINO_CP_S7`** | **D22** | Saída Digital | Chave $S_7$: Conexão com Terra de Proteção (PE) | Aberto = Estado AX ($12\text{ V}$) / Fechado = Normal |
-| **`PINO_CP_S8`** | **D23** | Saída Digital | Chave $S_8$: Ramo de Falha direta ($120\,\Omega$) antes do diodo | Fechado = Estado E ($1\text{ V}$ / Falha de linha) |
-| **`PINO_CP_S9_1`** | **D24** | Saída Digital | Chave $S_{9.1}$: Derivação 1 do Estado B (Bypass de $1870\,\Omega$) | Fechado = BX Nominal ($9\text{ V}$, $2740\,\Omega$) |
-| **`PINO_CP_S9_2`** | **D25** | Saída Digital | Chave $S_{9.2}$: Derivação 2 do Estado B (Bypass $1870\,\Omega + 920\,\Omega$) | Fechado = BX Limite Inf. ($8\text{ V}$, $1820\,\Omega$) |
-| **`PINO_CP_S10_C`** | **D26** | Saída Digital | Chave $S_{10.2}$: Habilitação do barramento do Estado C | Habilita Ramo $S_{11}$ (Carga sem ventilação) |
-| **`PINO_CP_S10_D`** | **D27** | Saída Digital | Chave $S_{10.1}$: Habilitação do barramento do Estado D | Habilita Ramo $S_{12}$ (Carga com ventilação) |
-| **`PINO_CP_S11_1`** | **D28** | Saída Digital | Chave $S_{11.1}$: Derivação 1 do Estado C (Bypass de $422\,\Omega$) | Fechado = CX Nominal ($6\text{ V}$, $1301\,\Omega \parallel 2740\,\Omega = 882\,\Omega$) |
-| **`PINO_CP_S11_2`** | **D29** | Saída Digital | Chave $S_{11.2}$: Derivação 2 do Estado C (Bypass $422\,\Omega + 392\,\Omega$) | Fechado = CX Limite Inf. ($5\text{ V}$, $909\,\Omega \parallel 2740\,\Omega = 682\,\Omega$) |
-| **`PINO_CP_S12_1`** | **D30** | Saída Digital | Chave $S_{12.1}$: Derivação 1 do Estado D (Bypass de $178\,\Omega$) | Fechado = DX Nominal ($3\text{ V}$, $270\,\Omega \parallel 2740\,\Omega = 245\,\Omega$) |
-| **`PINO_CP_S12_2`** | **D31** | Saída Digital | Chave $S_{12.2}$: Derivação 2 do Estado D (Bypass $178\,\Omega + 130\,\Omega$) | Fechado = DX Limite Inf. ($2\text{ V}$, $140\,\Omega \parallel 2740\,\Omega = 133\,\Omega$) |
+| **`PINO_CP_K_PE`** | **D30** | RLY6 | $S_7$: liga o retorno do veículo ao PE (aberto = AX, 12 V) | C = retorno, NO = PE |
+| **`PINO_CP_K_FALHA`** | **D31** | RLY1 | $S_8$: falha $120\,\Omega$ (R29) antes do diodo (Estado E) | C = CP, NO = R29 |
+| **`PINO_CP_K_B_EN`** | **D29** | RLY7 | habilita o bypass do ramo B ($S_{9.1}$: 2740 Ω, BX 9 V) | C = CPV (catodo), NO = 28_C |
+| **`PINO_CP_K_B_SEL`** | **D28** | RLY2 | seletor B: NC = abaixo de R30 (2740 Ω), NO = abaixo de R32 (1820 Ω, $S_{9.2}$, BX- 8 V) | C, NC, NO |
+| **`PINO_CP_K_CD_EN`** | **D27** | RLY5 | habilita a carga (ramo C ou D em paralelo com o B) | C = CPV, NO = 26_C |
+| **`PINO_CP_K_CD_SEL`** | **D26** | RLY8 | seletor SPDT de ramo: NC = ramo C, NO = ramo D | C, NC, NO |
+| **`PINO_CP_K_C_EN`** | **D25** | RLY3 | habilita o bypass do ramo C ($S_{11.1}$: 1301 Ω, CX 6 V) | C = topo C, NO = 24_C |
+| **`PINO_CP_K_C_SEL`** | **D24** | RLY4 | seletor C: NC = abaixo de R39 (1301 Ω), NO = abaixo de R37 (909 Ω, $S_{11.2}$, CX- 5 V) | C, NC, NO |
+| **`PINO_CP_K_D_EN`** | **D23** | RLY9 | habilita o bypass do ramo D ($S_{12.1}$: 270 Ω, DX 3 V) | C = topo D, NO = 22_C |
+| **`PINO_CP_K_D_SEL`** | **D22** | RLY10 | seletor D: NC = abaixo de R46 (270 Ω), NO = abaixo de R51 (140 Ω, $S_{12.2}$, DX- 2 V) | C, NC, NO |
 
-*Nota: Em repouso (com os relés de bypass desenergizados), os ramos operam no Limite Superior ($10\text{ V}$ para B, $7\text{ V}$ para C e $4\text{ V}$ para D).*
+Rede de resistores (placa): ramo B = R30 1870 + R31 910 + R32 10 + R33 1k8 + R34 20 (4610 Ω); ramo C = R41 2 + R40 30 + R39 390 + R38 390 + R37 2 + R35 820 + R36 75 + R42 13 + R43 1 (1723 Ω); ramo D = R48 160 + R49 10 + R50 3 + R45 3 + R46 2 + R51 130 + R47 130 + R44 10 (448 Ω); falha R29 120 Ω; diodo D11 1N4148.
 
-*Nomenclatura: $S_{10.1}$ (D27, ramo D) aparece como "S10.0" na `tabela2_estados_cp.csv` (Tabela II); $S_{9.0}$, $S_{11.0}$ e $S_{12.0}$ da Tabela II não são relés físicos, apenas o repouso sem bypass. O firmware e o `estado status` usam os nomes desta página.*
+*Nota: sem o habilita, cada ramo fica no Limite Superior (10 V para B, 7 V para C e 4 V para D). Os nomes $S_{9.0}$, $S_{11.0}$ e $S_{12.0}$ da Tabela II não são relés, apenas o repouso sem bypass; o "S10" da Tabela II é o par D27 (habilita) + D26 (seletor C/D).*
 
 ### 2.1. Tabela Estado → Relés (comando `estado …`, firmware)
 
-| Estado | Comando | $V_{CP}$ | Relés fechados (demais abertos) |
+| Estado | Comando | $V_{CP}$ | Relés energizados (demais desligados) |
 | :--- | :--- | :---: | :--- |
 | AX | `estado ax` / `a` | 12 V | nenhum |
-| BX+ | `estado bx+` | 10 V | S7 (D22) |
-| BX | `estado bx` / `b` | 9 V | S7, S9.1 (D24) |
-| BX- | `estado bx-` | 8 V | S7, S9.2 (D25) |
-| CX+ | `estado cx+` | 7 V | S7, S9.1, S10.2 (D26) |
-| CX | `estado cx` / `c` | 6 V | S7, S9.1, S10.2, S11.1 (D28) |
-| CX- | `estado cx-` | 5 V | S7, S9.1, S10.2, S11.2 (D29) |
-| DX+ | `estado dx+` | 4 V | S7, S9.1, S10.1 (D27) |
-| DX | `estado dx` / `d` | 3 V | S7, S9.1, S10.1, S12.1 (D30) |
-| DX- | `estado dx-` | 2 V | S7, S9.1, S10.1, S12.2 (D31) |
-| E | `estado e` | 1 V | S7, S8 (D23) |
+| BX+ | `estado bx+` | 10 V | D30 |
+| BX | `estado bx` / `b` | 9 V | D30, D29 |
+| BX- | `estado bx-` | 8 V | D30, D29, D28 |
+| CX+ | `estado cx+` | 7 V | D30, D29, D27 |
+| CX | `estado cx` / `c` | 6 V | D30, D29, D27, D25 |
+| CX- | `estado cx-` | 5 V | D30, D29, D27, D25, D24 |
+| DX+ | `estado dx+` | 4 V | D30, D29, D27, D26 |
+| DX | `estado dx` / `d` | 3 V | D30, D29, D27, D26, D23 |
+| DX- | `estado dx-` | 2 V | D30, D29, D27, D26, D23, D22 |
+| E | `estado e` | 1 V | D30, D31 |
 
 O Estado F (−12 V) é gerado pela estação e não é emulado pela Bancada (`estado f` → `ERRO: Estado`).
 

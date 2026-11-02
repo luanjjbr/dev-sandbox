@@ -8,22 +8,33 @@
 
 #include "TabelaEstadosCP.h"
 
-// Tabela canônica estado -> relés fechados (índice = CodigoEstadoCP).
-// Conferida contra tabela_estados_cp.csv, tabela2_estados_cp.csv e
-// LTSpice/teste3.asc. Ramos B/C/D sem bypass acionado = limite superior
-// (S9.0/S11.0/S12.0 da tabela2 não são relés físicos).
+// Tabela canônica estado -> relés FÍSICOS energizados (índice = CodigoEstadoCP).
+// Conferida contra o esquemático EasyEDA (placa real) e tabela2_estados_cp.csv.
+// Ramo sem bypass (EN desligado) = limite superior; EN = nominal; EN+SEL =
+// inferior. Os estados C/D mantêm o ramo B nominal (2740R) em paralelo, como a
+// Tabela II (S9.1). C e D nunca ficam juntos: o K_CD_SEL é um SPDT.
+//   Tabela II       ->  relés da placa
+//   S7              ->  K_PE (D30)            S8    -> K_FALHA (D31)
+//   S9.1 / S9.2     ->  K_B_EN / K_B_EN+K_B_SEL (D29 / D29+D28)
+//   S10 ramo C / D  ->  K_CD_EN / K_CD_EN+K_CD_SEL (D27 / D27+D26)
+//   S11.1 / S11.2   ->  K_C_EN / K_C_EN+K_C_SEL (D25 / D25+D24)
+//   S12.1 / S12.2   ->  K_D_EN / K_D_EN+K_D_SEL (D23 / D23+D22)
+static constexpr uint16_t CP_B_NOM = CP_K_PE | CP_K_B_EN;
+static constexpr uint16_t CP_RAMO_C = CP_B_NOM | CP_K_CD_EN;
+static constexpr uint16_t CP_RAMO_D = CP_B_NOM | CP_K_CD_EN | CP_K_CD_SEL;
+
 static constexpr uint16_t TABELA_RELES_CP[CP_TOTAL_ESTADOS] = {
     /* AX_NOMINAL  */ CP_RELES_NENHUM,
-    /* BX_SUPERIOR */ CP_RELE_S7,
-    /* BX_NOMINAL  */ CP_RELE_S7 | CP_RELE_S9_1,
-    /* BX_INFERIOR */ CP_RELE_S7 | CP_RELE_S9_2,
-    /* CX_SUPERIOR */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_C,
-    /* CX_NOMINAL  */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_C | CP_RELE_S11_1,
-    /* CX_INFERIOR */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_C | CP_RELE_S11_2,
-    /* DX_SUPERIOR */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_D,
-    /* DX_NOMINAL  */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_D | CP_RELE_S12_1,
-    /* DX_INFERIOR */ CP_RELE_S7 | CP_RELE_S9_1 | CP_RELE_S10_D | CP_RELE_S12_2,
-    /* E_FALHA     */ CP_RELE_S7 | CP_RELE_S8
+    /* BX_SUPERIOR */ CP_K_PE,
+    /* BX_NOMINAL  */ CP_B_NOM,
+    /* BX_INFERIOR */ CP_B_NOM | CP_K_B_SEL,
+    /* CX_SUPERIOR */ CP_RAMO_C,
+    /* CX_NOMINAL  */ CP_RAMO_C | CP_K_C_EN,
+    /* CX_INFERIOR */ CP_RAMO_C | CP_K_C_EN | CP_K_C_SEL,
+    /* DX_SUPERIOR */ CP_RAMO_D,
+    /* DX_NOMINAL  */ CP_RAMO_D | CP_K_D_EN,
+    /* DX_INFERIOR */ CP_RAMO_D | CP_K_D_EN | CP_K_D_SEL,
+    /* E_FALHA     */ CP_K_PE | CP_K_FALHA
 };
 
 // ============================================================================
@@ -31,20 +42,42 @@ static constexpr uint16_t TABELA_RELES_CP[CP_TOTAL_ESTADOS] = {
 // ============================================================================
 // A troca de estado usa como intermediário a interseção (atual & nova): abre
 // só os relés que saem, espera, e fecha só os que entram. As funções abaixo
-// percorrem TODOS os pares de estados e provam que:
-//  (a) cada estado: ramos C e D nunca juntos; S8 só no Estado E;
-//  (b) para dois estados conectados distintos (BX+ .. E, índices 1..10), a
-//      interseção contém S7 (o CP nunca "cai" para AX/12 V numa troca entre
-//      estados conectados), nunca contém S8 e nunca tem C+D juntos.
-// Como a interseção é subconjunto dos dois estados, nenhum resistor entra em
-// paralelo que não exista no estado de origem ou de destino.
-static constexpr uint16_t CP_RAMOS_C_D = CP_RELE_S10_C | CP_RELE_S10_D;
-static constexpr uint8_t  CP_INDICE_E  = static_cast<uint8_t>(CodigoEstadoCP::E_FALHA);
+// percorrem TODOS os estados e TODOS os pares e provam que:
+//  (a) cada estado e cada interseção são combinações "coerentes" da árvore:
+//      seletor só com o seu habilita; bypass de C só com a carga em C
+//      (K_CD_EN ligado e K_CD_SEL desligado); bypass de D só com a carga em D;
+//      K_CD_SEL só com K_CD_EN; K_FALHA só junto de K_PE;
+//  (b) K_FALHA só aparece no Estado E;
+//  (c) todo estado conectado (BX+ .. E, índices 1..10) tem K_PE, e a interseção
+//      de dois deles também (o CP nunca "cai" para AX/12 V numa troca) e nunca
+//      tem K_FALHA.
+// Ex.: CX -> DX: a interseção mantém K_PE, K_B_EN e K_CD_EN e solta K_C_EN;
+// com K_CD_SEL ainda desligado o ramo C fica sem bypass (CX+, ~7 V) durante a
+// pausa, e só então K_CD_SEL comuta para D. Não é preciso abrir K_CD_EN.
+static constexpr bool cpTem(uint16_t m, uint16_t b) { return (m & b) == b; }
+static constexpr bool cpImplica(uint16_t m, uint16_t se, uint16_t entao)
+{
+    return !cpTem(m, se) || cpTem(m, entao);
+}
+
+static constexpr bool cpCombinacaoCoerente(uint16_t m)
+{
+    return cpImplica(m, CP_K_B_SEL, CP_K_B_EN) &&
+           cpImplica(m, CP_K_C_SEL, CP_K_C_EN) &&
+           cpImplica(m, CP_K_D_SEL, CP_K_D_EN) &&
+           cpImplica(m, CP_K_CD_SEL, CP_K_CD_EN) &&
+           (!cpTem(m, CP_K_C_EN) || (cpTem(m, CP_K_CD_EN) && !cpTem(m, CP_K_CD_SEL))) &&
+           (!cpTem(m, CP_K_D_EN) || cpTem(m, CP_K_CD_EN | CP_K_CD_SEL)) &&
+           cpImplica(m, CP_K_FALHA, CP_K_PE);
+}
+
+static constexpr uint8_t CP_INDICE_E = static_cast<uint8_t>(CodigoEstadoCP::E_FALHA);
 
 static constexpr bool cpEstadoSeguro(uint8_t i)
 {
-    return ((TABELA_RELES_CP[i] & CP_RAMOS_C_D) != CP_RAMOS_C_D) &&
-           (((TABELA_RELES_CP[i] & CP_RELE_S8) == 0U) || (i == CP_INDICE_E));
+    return cpCombinacaoCoerente(TABELA_RELES_CP[i]) &&
+           (!cpTem(TABELA_RELES_CP[i], CP_K_FALHA) || (i == CP_INDICE_E)) &&
+           ((i == 0U) || cpTem(TABELA_RELES_CP[i], CP_K_PE));
 }
 
 static constexpr bool cpTodosEstadosSeguros(uint8_t i)
@@ -56,9 +89,9 @@ static constexpr bool cpTodosEstadosSeguros(uint8_t i)
 static constexpr bool cpIntersecaoSegura(uint8_t i, uint8_t j)
 {
     return (i == j) ||
-           ((((TABELA_RELES_CP[i] & TABELA_RELES_CP[j]) & CP_RELE_S7) == CP_RELE_S7) &&
-            (((TABELA_RELES_CP[i] & TABELA_RELES_CP[j]) & CP_RELE_S8) == 0U) &&
-            (((TABELA_RELES_CP[i] & TABELA_RELES_CP[j]) & CP_RAMOS_C_D) != CP_RAMOS_C_D));
+           (cpCombinacaoCoerente(TABELA_RELES_CP[i] & TABELA_RELES_CP[j]) &&
+            cpTem(TABELA_RELES_CP[i] & TABELA_RELES_CP[j], CP_K_PE) &&
+            !cpTem(TABELA_RELES_CP[i] & TABELA_RELES_CP[j], CP_K_FALHA));
 }
 
 static constexpr bool cpLinhaSegura(uint8_t i, uint8_t j)
@@ -78,9 +111,9 @@ static_assert(sizeof(TABELA_RELES_CP) / sizeof(TABELA_RELES_CP[0]) == CP_TOTAL_E
               "uma linha por estado");
 static_assert(TABELA_RELES_CP[0] == CP_RELES_NENHUM, "AX = todos os reles abertos");
 static_assert(cpTodosEstadosSeguros(0U),
-              "estado com ramos C+D juntos ou S8 fora do Estado E");
+              "estado incoerente com a arvore de reles, K_FALHA fora do E ou conectado sem K_PE");
 static_assert(cpTodosParesConectadosSeguros(1U),
-              "intersecao de dois estados conectados sem S7, com S8 ou com C+D");
+              "intersecao de dois estados conectados incoerente, sem K_PE ou com K_FALHA");
 
 // ============================================================================
 

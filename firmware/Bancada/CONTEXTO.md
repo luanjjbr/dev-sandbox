@@ -27,7 +27,7 @@ O projeto **Bancada** é uma aplicação embarcada desenvolvida com **PlatformIO
 | **Flash** | Nano: 32 KB \| Mega: 256 KB | Memória de programa |
 | **Baud Rate Serial** | **9600 bps** (8-N-1) | Padrão unificado no firmware e monitor |
 | **Sistema Operacional** | FreeRTOS Kernel v11.1.0-3 (`feilipu/FreeRTOS`) | Escalonador preemptivo baseado em prioridades |
-| **Norma de Referência** | IEC 62196-2 (Pino PP) / IEC 61851-1 Anexo A (Pino CP) | PP: resistores de 47R a 4700R; CP: 10 relés D22..D31 (só Mega) |
+| **Norma de Referência** | IEC 62196-2 (Pino PP) / IEC 61851-1 Anexo A (Pino CP) | PP: resistores de 47R a 4700R; CP: 10 relés D22..D31 (só Mega; pinagem da placa EasyEDA, ver docs/pinout.md) |
 
 ---
 
@@ -38,7 +38,7 @@ flowchart TD
     subgraph Hardware["Camada de Hardware (AVR 5V)"]
         LED["LED Integrado (Pino D13)"]
         MOSFETS["Barramento PP: Chaves S1 a S6<br>(Pinos D4 a D9)"]
-        RELES["Barramento CP: Relés S7 a S12.2<br>(Pinos D22 a D31, só Mega)"]
+        RELES["Barramento CP: 10 relés da placa EasyEDA<br>(Pinos D22 a D31, só Mega)"]
         UART["Porta Serial UART (9600 bps)"]
     end
 

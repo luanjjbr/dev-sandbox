@@ -37,11 +37,11 @@ EmuladorCabo cabo(PINO_CABO_S1, PINO_CABO_S2, PINO_CABO_S3,
                   PINO_CABO_S4, PINO_CABO_S5, PINO_CABO_S6);
 
 #ifdef BANCADA_TEM_CP
-EmuladorVeiculoCP veiculoCP(PINO_CP_S7, PINO_CP_S8,
-                            PINO_CP_S9_1, PINO_CP_S9_2,
-                            PINO_CP_S10_C, PINO_CP_S10_D,
-                            PINO_CP_S11_1, PINO_CP_S11_2,
-                            PINO_CP_S12_1, PINO_CP_S12_2,
+EmuladorVeiculoCP veiculoCP(PINO_CP_K_PE, PINO_CP_K_FALHA,
+                            PINO_CP_K_B_EN, PINO_CP_K_B_SEL,
+                            PINO_CP_K_CD_EN, PINO_CP_K_CD_SEL,
+                            PINO_CP_K_C_EN, PINO_CP_K_C_SEL,
+                            PINO_CP_K_D_EN, PINO_CP_K_D_SEL,
                             NIVEL_RELE_ATIVO, NIVEL_RELE_INATIVO,
                             TEMPO_BREAK_BEFORE_MAKE_CP_MS);
 #endif
@@ -81,8 +81,8 @@ void exibirHelp()
     Serial.println(F(" estado e     -> E: Falha / curto CP-PE (1 V)"));
     Serial.println(F(" estado a|b|c|d -> Atalhos para o nominal"));
     Serial.println(F(" estado status  -> Exibe relatorio do CP"));
-    Serial.println(F(" Reles: S10.2 = ramo C (D26); S10.1 = ramo D (D27)"));
-    Serial.println(F("        (S10.1 = S10.0 da Tabela II)"));
+    Serial.println(F(" Reles (placa EasyEDA): D30 = PE (S7); D31 = falha (S8)"));
+    Serial.println(F("        D29/D28 ramo B; D27 carga, D26 C/D; D25/D24 C; D23/D22 D"));
 #else
     Serial.println(F(" estado ...   -> Indisponivel no Nano (use o Mega)"));
 #endif

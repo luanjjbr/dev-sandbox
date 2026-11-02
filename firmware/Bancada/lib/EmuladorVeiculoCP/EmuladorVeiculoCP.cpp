@@ -12,11 +12,11 @@
 #include <Arduino_FreeRTOS.h>
 #include <task.h>
 
-EmuladorVeiculoCP::EmuladorVeiculoCP(uint8_t pinoS7, uint8_t pinoS8,
-                                     uint8_t pinoS9_1, uint8_t pinoS9_2,
-                                     uint8_t pinoS10_C, uint8_t pinoS10_D,
-                                     uint8_t pinoS11_1, uint8_t pinoS11_2,
-                                     uint8_t pinoS12_1, uint8_t pinoS12_2,
+EmuladorVeiculoCP::EmuladorVeiculoCP(uint8_t pinoKPe, uint8_t pinoKFalha,
+                                     uint8_t pinoKBEn, uint8_t pinoKBSel,
+                                     uint8_t pinoKCdEn, uint8_t pinoKCdSel,
+                                     uint8_t pinoKCEn, uint8_t pinoKCSel,
+                                     uint8_t pinoKDEn, uint8_t pinoKDSel,
                                      uint8_t nivelAtivo, uint8_t nivelInativo,
                                      uint16_t tempoBreakMs)
     : _nivelAtivo(nivelAtivo),
@@ -24,16 +24,16 @@ EmuladorVeiculoCP::EmuladorVeiculoCP(uint8_t pinoS7, uint8_t pinoS8,
       _tempoBreakMs(tempoBreakMs),
       _estadoAtual(CodigoEstadoCP::AX_NOMINAL)
 {
-    _pinos[0] = pinoS7;
-    _pinos[1] = pinoS8;
-    _pinos[2] = pinoS9_1;
-    _pinos[3] = pinoS9_2;
-    _pinos[4] = pinoS10_C;
-    _pinos[5] = pinoS10_D;
-    _pinos[6] = pinoS11_1;
-    _pinos[7] = pinoS11_2;
-    _pinos[8] = pinoS12_1;
-    _pinos[9] = pinoS12_2;
+    _pinos[0] = pinoKPe;
+    _pinos[1] = pinoKFalha;
+    _pinos[2] = pinoKBEn;
+    _pinos[3] = pinoKBSel;
+    _pinos[4] = pinoKCdEn;
+    _pinos[5] = pinoKCdSel;
+    _pinos[6] = pinoKCEn;
+    _pinos[7] = pinoKCSel;
+    _pinos[8] = pinoKDEn;
+    _pinos[9] = pinoKDSel;
 }
 
 void EmuladorVeiculoCP::aplicarMascara(uint16_t mascara)
@@ -83,8 +83,9 @@ bool EmuladorVeiculoCP::ativarEstado(CodigoEstadoCP estado)
     const uint16_t mascaraAtual = cpRelesDoEstado(_estadoAtual);
     const uint16_t mascaraNova  = cpRelesDoEstado(estado);
     // Intermediário = interseção. Provado em TabelaEstadosCP.cpp (static_assert):
-    // entre estados conectados ela mantém S7, nunca tem S8 nem ramos C+D juntos,
-    // e por ser subconjunto dos dois estados não cria paralelo espúrio.
+    // entre estados conectados ela mantém K_PE, nunca tem K_FALHA e é sempre uma
+    // combinação coerente da árvore de relés (seletor só com o seu habilita);
+    // por ser subconjunto dos dois estados, não cria paralelo espúrio.
     const uint16_t mascaraIntermediaria = mascaraAtual & mascaraNova;
 
     const bool algumReleSai    = (mascaraIntermediaria != mascaraAtual);
@@ -133,11 +134,8 @@ void EmuladorVeiculoCP::imprimirStatus() const
         default:                          Serial.print(F("Desconhecido")); break;
     }
 
-    // Nomes conforme docs/pinout.md (S10.1 = S10.0 da Tabela II)
-    static const char NOMES_RELES[CP_TOTAL_RELES][6] PROGMEM = {
-        "S7", "S8", "S9.1", "S9.2", "S10.2", "S10.1", "S11.1", "S11.2", "S12.1", "S12.2"
-    };
-
+    // Relés listados pelo PINO físico que os aciona (placa EasyEDA), ex.:
+    // "Reles: D30 D29" no BX. O app só lê o campo "Estado".
     Serial.print(F(" | Reles: "));
     const uint16_t mascara = cpRelesDoEstado(_estadoAtual);
     if (mascara == CP_RELES_NENHUM)
@@ -149,13 +147,12 @@ void EmuladorVeiculoCP::imprimirStatus() const
     {
         if ((mascara & (1U << i)) != 0U)
         {
-            char nome[6];
-            strcpy_P(nome, NOMES_RELES[i]);
             if (!primeiro)
             {
                 Serial.print(' ');
             }
-            Serial.print(nome);
+            Serial.print('D');
+            Serial.print(_pinos[i]);
             primeiro = false;
         }
     }

@@ -64,18 +64,23 @@
 // ============================================================================
 // 5. PINOS DO EMULADOR DE VEÍCULO - PINO CP (IEC 61851-1 ANEXO A)
 // ============================================================================
-// Acionamento dos 10 relés de comutação de estados e tolerâncias operacionais
+// Acionamento dos 10 relés do CP conforme a PLACA REAL (esquemático EasyEDA
+// bancada_de_teste_reles_corrigido, 2026-10-09; decisão do usuário 2026-11-02).
+// Driver: Dxx -> 1k -> S8050 -> bobina SRD-05VDC (ativo em HIGH).
+// Cada ramo é uma árvore "habilita (EN) + seletor (SEL)": o SEL só atua com o
+// seu EN ligado; NC do SEL = tap nominal, NO = tap inferior. Ver
+// lib/EmuladorVeiculoCP/TabelaEstadosCP.h e docs/pinout.md.
 #if defined(PLACA_MEGA) || defined(__AVR_ATmega2560__)
-    #define PINO_CP_S7      22   // S7: Conexão PE (Aberto = Estado AX, 12V)
-    #define PINO_CP_S8      23   // S8: Falha 120R direto ao PE (Fechado = Estado E, 1V)
-    #define PINO_CP_S9_1    24   // S9.1: Bypass 1870R -> 2740R (Estado BX Nominal, 9V)
-    #define PINO_CP_S9_2    25   // S9.2: Bypass 1870R+920R -> 1820R (Estado BX Limite Inf, 8V)
-    #define PINO_CP_S10_C   26   // S10.2: Habilita barramento do Estado C
-    #define PINO_CP_S10_D   27   // S10.1: Habilita barramento do Estado D
-    #define PINO_CP_S11_1   28   // S11.1: Bypass 422R -> 1301R (Estado CX Nominal, 6V)
-    #define PINO_CP_S11_2   29   // S11.2: Bypass 422R+392R -> 909R (Estado CX Limite Inf, 5V)
-    #define PINO_CP_S12_1   30   // S12.1: Bypass 178R -> 270R (Estado DX Nominal, 3V)
-    #define PINO_CP_S12_2   31   // S12.2: Bypass 178R+130R -> 140R (Estado DX Limite Inf, 2V)
+    #define PINO_CP_K_PE      30   // RLY6  (S7): C-NO liga o retorno ao PE (aberto = AX, 12 V)
+    #define PINO_CP_K_FALHA   31   // RLY1  (S8): C-NO liga o CP (antes do diodo) ao R29 120R (Estado E)
+    #define PINO_CP_K_B_EN    29   // RLY7 : habilita o bypass do ramo B (S9.1 -> 2740R, BX 9 V)
+    #define PINO_CP_K_B_SEL   28   // RLY2 : seletor B, NO = 1820R (S9.2, BX- 8 V; exige K_B_EN)
+    #define PINO_CP_K_CD_EN   27   // RLY5 : habilita a carga (ramo C ou D em paralelo com o B)
+    #define PINO_CP_K_CD_SEL  26   // RLY8 : seletor SPDT, NC = ramo C / NO = ramo D (exige K_CD_EN)
+    #define PINO_CP_K_C_EN    25   // RLY3 : habilita o bypass do ramo C (S11.1 -> 1301R, CX 6 V)
+    #define PINO_CP_K_C_SEL   24   // RLY4 : seletor C, NO = 909R (S11.2, CX- 5 V; exige K_C_EN)
+    #define PINO_CP_K_D_EN    23   // RLY9 : habilita o bypass do ramo D (S12.1 -> 270R, DX 3 V)
+    #define PINO_CP_K_D_SEL   22   // RLY10: seletor D, NO = 140R (S12.2, DX- 2 V; exige K_D_EN)
 #endif
 
 // Break-before-make do CP: pausa mínima (ms) entre abrir os relés que saem e

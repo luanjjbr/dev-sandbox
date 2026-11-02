@@ -4,6 +4,7 @@
  * Arquivo: EmuladorVeiculoCP.h
  * Finalidade: Abstração do Emulador do Veículo no Piloto de Controle
  *             (Pino CP - IEC 61851-1 Anexo A), 10 relés D22..D31 no Mega
+ *             (pinagem da placa EasyEDA: ver TabelaEstadosCP.h)
  * Microcontrolador: Arduino Mega 2560 (no Nano o CP não existe fisicamente)
  * ============================================================================
  */
@@ -17,7 +18,7 @@
 
 class EmuladorVeiculoCP {
 private:
-    uint8_t _pinos[CP_TOTAL_RELES];  // Pinos na ordem do bitmask (S7 .. S12.2)
+    uint8_t _pinos[CP_TOTAL_RELES];  // Pinos na ordem do bitmask (K_PE .. K_D_SEL)
     uint8_t _nivelAtivo;             // Nível que fecha o relé
     uint8_t _nivelInativo;           // Nível que abre o relé
     uint16_t _tempoBreakMs;          // Pausa break-before-make (ms)
@@ -28,13 +29,13 @@ private:
 
 public:
     /**
-     * @brief Construtor: registra os 10 pinos dos relés (ordem do bitmask)
+     * @brief Construtor: registra os 10 pinos dos relés físicos (ordem do bitmask)
      */
-    EmuladorVeiculoCP(uint8_t pinoS7, uint8_t pinoS8,
-                      uint8_t pinoS9_1, uint8_t pinoS9_2,
-                      uint8_t pinoS10_C, uint8_t pinoS10_D,
-                      uint8_t pinoS11_1, uint8_t pinoS11_2,
-                      uint8_t pinoS12_1, uint8_t pinoS12_2,
+    EmuladorVeiculoCP(uint8_t pinoKPe, uint8_t pinoKFalha,
+                      uint8_t pinoKBEn, uint8_t pinoKBSel,
+                      uint8_t pinoKCdEn, uint8_t pinoKCdSel,
+                      uint8_t pinoKCEn, uint8_t pinoKCSel,
+                      uint8_t pinoKDEn, uint8_t pinoKDSel,
                       uint8_t nivelAtivo, uint8_t nivelInativo,
                       uint16_t tempoBreakMs);
 

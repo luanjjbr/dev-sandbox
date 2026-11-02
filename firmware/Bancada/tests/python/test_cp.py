@@ -26,18 +26,22 @@ PORTA_SERIAL = None   # preenchido por argumento (--porta)
 PLACA = "mega"        # preenchido por argumento (--placa)
 
 # comando -> (rótulo esperado no status, relés esperados no status)
+# Relés listados pelo pino físico da placa EasyEDA, na ordem do bitmask:
+# D30 K_PE (S7), D31 K_FALHA (S8), D29 K_B_EN, D28 K_B_SEL, D27 K_CD_EN,
+# D26 K_CD_SEL (NC = ramo C, NO = ramo D), D25 K_C_EN, D24 K_C_SEL,
+# D23 K_D_EN, D22 K_D_SEL. Seletor só atua com o seu habilita.
 ESTADOS_CP = {
     "ax":  ("AX",  "nenhum"),
-    "bx+": ("BX+", "S7"),
-    "bx":  ("BX",  "S7 S9.1"),
-    "bx-": ("BX-", "S7 S9.2"),
-    "cx+": ("CX+", "S7 S9.1 S10.2"),
-    "cx":  ("CX",  "S7 S9.1 S10.2 S11.1"),
-    "cx-": ("CX-", "S7 S9.1 S10.2 S11.2"),
-    "dx+": ("DX+", "S7 S9.1 S10.1"),
-    "dx":  ("DX",  "S7 S9.1 S10.1 S12.1"),
-    "dx-": ("DX-", "S7 S9.1 S10.1 S12.2"),
-    "e":   ("E",   "S7 S8"),
+    "bx+": ("BX+", "D30"),
+    "bx":  ("BX",  "D30 D29"),
+    "bx-": ("BX-", "D30 D29 D28"),
+    "cx+": ("CX+", "D30 D29 D27"),
+    "cx":  ("CX",  "D30 D29 D27 D25"),
+    "cx-": ("CX-", "D30 D29 D27 D25 D24"),
+    "dx+": ("DX+", "D30 D29 D27 D26"),
+    "dx":  ("DX",  "D30 D29 D27 D26 D23"),
+    "dx-": ("DX-", "D30 D29 D27 D26 D23 D22"),
+    "e":   ("E",   "D30 D31"),
 }
 
 ALIASES = {"a": "AX", "b": "BX", "c": "CX", "d": "DX"}
@@ -131,7 +135,7 @@ class TesteCPMega(BaseSerial):
         self.assertEqual(self.enviar_comando("estado cx-"), "OK")
         linha = self.status_cp()
         self.assertEqual(self.campo(linha, "Estado"), "CX-")
-        self.assertEqual(self.campo(linha, "Reles"), "S7 S9.1 S10.2 S11.2")
+        self.assertEqual(self.campo(linha, "Reles"), "D30 D29 D27 D25 D24")
 
     def test_08_linha_longa_descartada(self):
         """Linha > 31 caracteres é descartada inteira (não executa o prefixo)."""
