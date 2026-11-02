@@ -1,200 +1,195 @@
 # 🧠 CONTEXT.md — Contexto do Projeto dev-sandbox
 
-Documento de contexto técnico e operacional do repositório **dev-sandbox**. Criado para fornecer a desenvolvedores e agentes de IA uma visão completa da arquitetura, módulos implementados, convenções de código, status atual e instruções de evolução.
+Documento de contexto técnico, arquitetural e operacional do repositório **dev-sandbox**. Criado para fornecer a desenvolvedores e agentes de IA uma visão aprofundada da arquitetura, convenções, módulos implementados, status de testes e diretrizes de evolução.
 
 ---
 
 ## 📌 1. Visão Geral
 
 * **Repositório:** `dev-sandbox`
-* **Finalidade:** Laboratório pessoal de desenvolvimento em C# e .NET para prototipagem rápida, ferramentas de engenharia, utilitários práticos e testes de conceitos arquiteturais.
+* **Finalidade:** Laboratório pessoal de desenvolvimento em C# e .NET para prototipagem rápida, utilitários práticos de engenharia e experimentação de padrões arquiteturais modernos.
 * **Stack Principal:**
-  * **Linguagem / Runtime:** C# 13+ / .NET 10.0 (`net10.0` e `net10.0-windows`)
-  * **Interface Gráfica:** Windows Forms com Dark Mode nativo via Windows Desktop Window Manager (`dwmapi.dll`)
+  * **Linguagem / Runtime:** C# 13+ / .NET 10.0 (`net10.0` para Core/Testes e `net10.0-windows` para UI)
+  * **Padrões de Qualidade Global:** `Directory.Build.props` com compilação estrita (`TreatWarningsAsErrors=true`), nulabilidade ativa (`Nullable=enable`) e analisadores de código de última geração (`EnableNETAnalyzers=true`, `AnalysisLevel=latest-recommended`)
+  * **Interface Gráfica:** Windows Forms com Dark Mode nativo via Desktop Window Manager (`dwmapi.dll`) e controles customizados WinUI 3 Fluent Dark
+  * **Comunicação Serial:** `System.IO.Ports` com contratos desacoplados (`ISerialEngine`, `ISerialPort`, `SistemaSerialPort`)
+  * **Abstração Temporal:** `System.TimeProvider` nativo do .NET com suporte a testes determinísticos (`Microsoft.Extensions.TimeProvider.Testing`)
   * **Testes Automatizados:** NUnit 4 (`NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`)
-  * **Solução:** Formato XML de solução do Visual Studio (`dev-sandbox.slnx`)
-  * **Comunicação Serial:** `System.IO.Ports`
+  * **Solução:** Formato de solução XML do Visual Studio (`dev-sandbox.slnx`)
+  * **Firmware e Simulação:** PlatformIO, FreeRTOS, SimulIDE 2.0 e HHD Virtual Serial Port Tools
 
 ---
 
 ## 🏛️ 2. Arquitetura da Solução
 
-O projeto segue estritamente o princípio da separação de responsabilidades em três camadas fundamentais:
+O projeto segue estritamente a separação de responsabilidades em camadas desacopladas, com foco em testabilidade sem dependência de hardware físico ou subsistemas de janelas:
 
 ```plaintext
 dev-sandbox/
-├── dev-sandbox.slnx                     # Solução unificada
-├── README.md                            # Guia rápido e documentação externa
-├── CONTEXT.md                           # Memória técnica e contexto do projeto
+├── dev-sandbox.slnx                     # Arquivo de solução unificada
+├── Directory.Build.props                # Regras de build corporativas (avisos como erro, analisadores)
+├── README.md                            # Guia rápido e apresentação do projeto
+├── CONTEXT.md                           # Memória técnica e contexto arquitetural completo
 ├── publish-standalone.ps1               # Script para gerar executável único standalone
-├── app/                                 # Pasta rastreada no Git com o executável único pronto
-│   └── DevSandbox.UI.exe                # Executável autocontido pronto para uso e upload no GitHub
-├── dist/                                # Executáveis e binários locais (gerados a cada build)
+├── dist/                                # Compilações locais e saídas do publish
+│   └── standalone/                      # Diretório de saída do executável único (~49 MB)
+├── firmware/                            # Firmware embarcado da bancada de testes EVSE
+│   └── Bancada/                         # Projeto PlatformIO + FreeRTOS (foco no ATmega2560)
+├── simulacao/                           # Arquivos de simulação virtual da bancada
+│   └── Bancada/                         # Esquemático SimulIDE 2.0 (Mega) e guia de portas COM
 ├── src/
-│   ├── DevSandbox.Core/                 # Biblioteca de Classes (net10.0 pura)
-│   │   ├── Bancada/                     # Emulador de cabo PP e estados de recarga CP (Modo 3)
-│   │   ├── Converters/                  # Algoritmos de conversão numérica
-│   │   ├── Pomodoro/                    # Motor de tempo e estados do Pomodoro
-│   │   └── Serial/                      # Motor de comunicação UART resiliente
+│   ├── DevSandbox.Core/                 # [Camada de Domínio e Regras de Negócio - net10.0 pura]
+│   │   ├── Bancada/                     # BancadaEngine, EstadoCaboPP, EstadoVeiculoCP (11 estados), RespostaFirmware
+│   │   ├── Converters/                  # CalculadoraHex, BaseNumerica
+│   │   ├── Pomodoro/                    # PomodoroEngine (TimeProvider), EstadoPomodoro
+│   │   └── Serial/                      # ISerialEngine, ISerialPort, SistemaSerialPort, SupervisorioSerialEngine
 │   │
-│   └── DevSandbox.UI/                   # Executável WinForms (net10.0-windows)
-│       ├── Common/                      # Gerenciador de temas e estilização Win32/DWM
-│       ├── Forms/                       # Telas e janelas (MainHub, Pomodoro, Serial, Calc, Bancada)
-│       └── Program.cs                   # Ponto de entrada (STAThread)
+│   └── DevSandbox.UI/                   # [Camada de Apresentação WinForms Fluent - net10.0-windows]
+│       ├── Common/                      # ThemeManager (cache GDI, desenho de foco), controles Fluent
+│       ├── Forms/                       # MainForm, FormBancada, FormCalculadora, FormPomodoro, FormSupervisorio
+│       └── Program.cs                   # Ponto de entrada STAThread
 │
 └── tests/
-    └── DevSandbox.Tests/                # Suíte de Testes Automatizados (NUnit)
-        ├── BancadaEngineTests.cs        # 16 testes de comandos seriais e estados PP/CP
-        ├── CalculadoraHexTests.cs       # 13 testes de conversão e casos de borda
-        ├── PomodoroEngineTests.cs       # 8 testes de ciclo assíncrono e eventos
-        └── SupervisorioSerialEngineTests.cs # 7 testes de estabilidade e limites
+    └── DevSandbox.Tests/                # [Camada de Testes Automatizados - NUnit 4]
+        ├── Fakes/                       # FakeSerialPort, FakeSerialEngine
+        ├── BancadaCPTests.cs            # Testes da máquina de estados CP (11 estados) e tolerâncias
+        ├── BancadaEngineTests.cs        # Testes de comando, eventos e ciclo da bancada
+        ├── BancadaRevisaoTests.cs       # Testes de sincronização, timeouts e concorrência
+        ├── CalculadoraHexTests.cs       # Testes de conversão 64 bits e bases
+        ├── CalculadoraHexEntradaTests.cs # Validações de entrada, hífens e sinais
+        ├── PomodoroEngineTests.cs       # Testes determinísticos com FakeTimeProvider
+        ├── SupervisorioSerialEngineTests.cs # Testes de resiliência serial e watchdog
+        ├── QaBancada3cTests.cs          # Validação do contrato textual e desfechos com o firmware
+        └── QaBordasTests.cs             # Casos de borda de QA e resiliência de API
 ```
 
-### Regras de Ouro da Arquitetura:
-1. **`DevSandbox.Core` NUNCA referencia `DevSandbox.UI` ou bibliotecas visuais:** Não pode haver acoplamento com WinForms, `System.Drawing` ou `System.Windows.Forms` dentro do Core.
-2. **`DevSandbox.UI` é uma Casca Visual Fina (*Thin UI*):** Os formulários apenas tratam cliques, exibem valores e assinam eventos dos motores do Core.
-3. **Toda lógica crítica deve ser testável no `DevSandbox.Tests`:** Cálculos, transições de estado assíncronas e tratamentos de erro devem ser validados via NUnit sem instanciar janelas.
+### Regras Fundamentais da Arquitetura:
+1. **`DevSandbox.Core` NUNCA referencia bibliotecas visuais:** É expressamente proibida a importação de `System.Windows.Forms` ou `System.Drawing` dentro do Core. O Core é uma biblioteca pura, portável para qualquer ambiente .NET (Linux, Android, Web).
+2. **Inversão de Dependências e Abstrações de I/O:** Nenhum componente de domínio depende diretamente de classes concretas de hardware (como `System.IO.Ports.SerialPort` ou `System.Diagnostics.Stopwatch`). Motores e serviços utilizam interfaces (`ISerialEngine`, `ISerialPort`) e abstrações temporais (`TimeProvider`), permitindo injeção de dublês em testes.
+3. **Casca Visual Fina (*Thin UI*):** Formulários não processam regras de negócio, não implementam parsing numérico complexo e não gerenciam threads de I/O diretamente; apenas apresentam estados e repassam eventos aos motores.
+4. **Resiliência e Retorno Explícito de Transmissão:** Operações de escrita em portas externas retornam confirmação booleana e emitem eventos contextuais (`ComandoConcluido`) com desfechos mapeados (`Confirmado`, `NaoEnviado`, `SemResposta`, `ErroFirmware`).
 
 ---
 
 ## 🧩 3. Detalhamento dos Módulos Implementados
 
-### 3.1. 🔌 Supervisório Serial (UART / COM)
-* **Core (`src/DevSandbox.Core/Serial/SupervisorioSerialEngine.cs`):**
-  * Detecção de portas ativas via `SerialPort.GetPortNames()`.
-  * Suporte a taxas de 1.200 a 921.600 bps.
-  * **Mecanismo de Resiliência (Watchdog):** Temporizador periódico que monitora a abertura da porta. Se o dispositivo físico for desconectado abruptamente (remoção de cabo USB), dispara `ConexaoPerdida` e tenta reconectar em segundo plano sem travar a aplicação, emitindo `Reconectado` assim que a porta reaparece.
-  * Gerenciamento de ciclo de vida seguro com `IDisposable` e descarte de buffers/handles nativos.
-* **UI (`src/DevSandbox.UI/Forms/FormSupervisorio.cs`):**
-  * Terminal visual escuro com texto verde monocromático.
-  * Mecanismo de paginação/corte de memória: mantém o histórico limitado a 50.000 caracteres para impedir vazamentos de RAM em transmissões contínuas.
-  * Envio de comandos com tecla Enter e barra de status dinâmica.
-* **Testes (`tests/DevSandbox.Tests/SupervisorioSerialEngineTests.cs`):**
-  * Garante integridade de inicialização, validação de argumentos inválidos de conexão, e chamada segura/idempotente de `Dispose()`.
+### 3.1. ⚡ Emulador de Bancada EVSE (Modo 3 - IEC 61851-1 / IEC 62196-2)
+* **11 Estados do Control Pilot (CP):**
+  * O enum `EstadoVeiculoCP` modela fielmente os 11 estados normalizados:
+    * **Família AX:** `AX` (12V - Desconectado).
+    * **Família BX:** `BXMais` (+9,56V a +8,44V, nominal ~9V), `BX` (nominal 2740 Ω), `BXMenos` (+8,56V a +7,44V).
+    * **Família CX:** `CXMais` (+6,59V a +5,41V, nominal ~6V), `CX` (nominal 882 Ω), `CXMenos` (+5,59V a +4,41V).
+    * **Família DX:** `DXMais` (+3,59V a +2,41V, nominal ~3V), `DX` (nominal 246 Ω), `DXMenos` (+2,59V a +1,41V).
+    * **Família E:** `E` (~1 V - Falha: 120 Ω do CP ao PE).
+  * *Observação arquitetural:* O Estado F (-12V) foi expressamente descartado por decisão de projeto, pois reflete uma condição gerada pela estação de recarga, não sendo simulado pelo veículo.
+* **Protocolo Textual e Contrato com Firmware:**
+  * Comandos de CP: `estado <ax|bx+|bx|bx-|cx+|cx|cx-|dx+|dx|dx-|e|status>` (com atalhos `a`, `b`, `c`, `d`).
+  * Comandos de PP: `cabo <0..6>`.
+  * Comandos de diagnóstico: `debug stack` (avalia o *High Water Mark* da pilha FreeRTOS).
+  * Respostas padronizadas do firmware: `OK` para sucesso e `ERRO: <mensagem>` para falhas ou parâmetros inválidos.
+  * Canal 1 do PP (4700 Ω): Mantido como resistor de bancada para calibração interna, devidamente documentado como "fora da norma IEC 62196-2".
+* **Motor da Bancada (`BancadaEngine.cs`):**
+  * Recebe `ISerialEngine` injetável, operando desacoplado da porta real.
+  * **Gerenciamento de Transações e Respostas (`RespostaFirmware`, `ConclusaoComando`):** Comandos enviados entram em uma fila FIFO com identificador incremental (`Id`). A classe monitora as respostas seriais com prazo de atividade de 4 segundos, descartando mensagens órfãs e notificando o evento `ComandoConcluido` com os desfechos `Confirmado`, `NaoEnviado`, `SemResposta` ou `ErroFirmware`.
+  * **Sincronização na Conexão:** Ao abrir a porta, envia `estado status` para sincronizar o estado real do microcontrolador, incluindo mecanismo de nova tentativa após o reset elétrico provocado pelo pulso DTR.
+* **Interface Visual (`FormBancada.cs`):**
+  * **Seleção em Dois Níveis:** Painel superior para escolha da família do estado (`AX`, `BX`, `CX`, `DX`, `E`) e painel secundário para o nível de tolerância (`Sup (+)`, `Nom`, `Inf (-)`).
+  * **Linha de Status com Confirmação do Firmware:** Exibe o estado confirmado pela placa (ex.: `Firmware: BX+ (+10 V)`), complementado por indicadores coloridos do último comando despachado.
+  * Botão **Status** para consulta manual do estado dos relés e terminal com limite circular de 50.000 caracteres.
 
 ---
 
-### 3.2. ⏱️ Pomodoro Timer
-* **Core (`src/DevSandbox.Core/Pomodoro/PomodoroEngine.cs` e `EstadoPomodoro.cs`):**
-  * Cronômetro de alta precisão baseado em `System.Diagnostics.Stopwatch`.
-  * Laço temporal assíncrono não bloqueante via `Task.Delay(50, token)` e controle fino com `CancellationTokenSource`.
-  * Suporte real a **Pausar (`Pausar()`)** e **Retomar (`Retomar()`)**, preservando os milissegundos restantes sem perder contagem.
-  * Estados explícitos: `Parado`, `Foco`, `DescansoCurto`, `DescansoLongo`, `Pausado`.
-  * Eventos: `OnTick(TimeSpan)` (com garantia de disparo no `00:00`) e `OnEstadoMudou(EstadoPomodoro)`.
-* **UI (`src/DevSandbox.UI/Forms/FormPomodoro.cs`):**
-  * Botões de presets rápidos (25m Foco, 15m Descanso Longo, 5m Descanso Curto) e seletor numérico manual.
-  * Alternância dinâmica dos botões de controle (Iniciar/Parar e Pausar/Continuar) com paleta contextual de cores.
-  * Alertas visuais e sonoros (`SystemSounds.Beep`).
-* **Testes (`tests/DevSandbox.Tests/PomodoroEngineTests.cs`):**
-  * Testes assíncronos que usam `TaskCompletionSource` para verificar conclusões de ciclos sem depender de esperas arbitrárias em tempo real.
+### 3.2. 🔌 Supervisório Serial (UART / COM)
+* **Abstrações e Contratos (`ISerialEngine.cs`, `ISerialPort.cs`, `SistemaSerialPort.cs`):**
+  * `ISerialEngine`: Contrato de alto nível (propriedades `EstaConectado`, `TentandoReconectar`, eventos `DadosRecebidos`, `ConexaoPerdida`, `Reconectado`, métodos de conexão, desconexão e transmissão `EnviarDados`).
+  * `ISerialPort`: Abstração mínima da porta serial física (`Open`, `Close`, `Write`, `WriteLine`, `ReadExisting`, `DataReceived`), permitindo simulação de falhas de E/S sem hardware.
+  * `SistemaSerialPort`: Adaptador sobre `System.IO.Ports.SerialPort` com timeouts configurados para 1000 ms.
+* **Motor Resiliente (`SupervisorioSerialEngine.cs`):**
+  * **Concorrência e Prevenção de Deadlocks:** Disparo de eventos estritamente fora de blocos `lock` para evitar inversão de prioridade/deadlock com `Control.Invoke` da UI.
+  * **Desacoplamento de Locks na Recepção:** `PortaSerial_DataReceived` não adquire a trava interna `_lock`; falhas de leitura são sinalizadas para resolução segura no ciclo do watchdog.
+  * **Watchdog Inteligente:** Monitora a presença da porta serial. Para suportar portas COM virtuais de drivers emulados que não gravam em `HARDWARE\DEVICEMAP\SERIALCOMM`, a ausência em `GetPortNames()` só é tratada como desconexão se a porta constava na lista no momento da conexão inicial.
+  * **Transmissão Segura (`EnviarDados`):** Retorna `bool`. Em caso de erro de E/S, fecha a porta, dispara `ConexaoPerdida` e aciona a reconexão automática sem quebrar a UI.
+* **Interface Visual (`FormSupervisorio.cs`):**
+  * **Recepção em Lotes (50 ms):** Dados recebidos são acumulados em buffer rápido e renderizados na tela a cada 50 ms por um timer WinForms, eliminando travamentos de UI.
+  * Histórico limitado a 50.000 caracteres e registro explícito de falhas de envio ("✖ Não enviado").
 
 ---
 
-### 3.3. 🔢 Conversor de Bases Numéricas (Calculadora Hex)
-* **Core (`src/DevSandbox.Core/Converters/CalculadoraHex.cs`):**
-  * Conversão bidirecional entre Hexadecimal, Decimal e Binário.
-  * Suporte integral a inteiros de 64 bits (`ulong` e `long` com complemento de dois, suportando de `0x0` até `0xFFFFFFFFFFFFFFFF`).
-  * Tolerância a prefixos (`0x`, `0X`, `0b`, `0B`) e separadores de legibilidade (espaços, sublinhados `_`, hifens `-`).
-  * Agrupamento visual automático de bits em *nibbles* (blocos de 4 bits).
-* **UI (`src/DevSandbox.UI/Forms/FormCalculadora.cs`):**
-  * Detecção inteligente ao pressionar Enter: avalia se a entrada contém caracteres hexadecimais, binários ou numéricos decimais e executa a conversão correta.
-  * Botões de cópia rápida para o Clipboard com animação visual transitória de sucesso ("✓ Copiado!").
-* **Testes (`tests/DevSandbox.Tests/CalculadoraHexTests.cs`):**
-  * 13 testes unitários cobrindo desde entradas válidas até casos de borda extremos (32 bits sem overflow, limites de 64 bits, caracteres ilegais e tratamento de exceções).
+### 3.3. ⏱️ Pomodoro Timer
+* **Motor Baseado em `TimeProvider` (`PomodoroEngine.cs`):**
+  * Utiliza `TimeProvider` injetável (`System.TimeProvider`), permitindo testes determinísticos e rápidos via `FakeTimeProvider`.
+  * **Troca Atômica de Ciclos:** Substituição do `CancellationTokenSource` sob trava protegida, eliminando concorrência entre ciclos anteriores e novos.
+  * **Fechamento Preciso:** Garante disparo do tick `00:00` antes da transição para o estado `Parado`.
+  * **Isolamento de Assinantes:** Iteração individual por `GetInvocationList()`, garantindo que exceções em manipuladores externos não derrubem o motor.
+* **Interface Visual (`FormPomodoro.cs`):**
+  * Notificação não bloqueante ao concluir o ciclo: emite alerta sonoro (`SystemSounds.Asterisk`) e aciona a API nativa `FlashWindowEx` via P/Invoke para piscar o aplicativo na barra de tarefas caso esteja em segundo plano, sem utilizar caixas modais `MessageBox`.
 
 ---
 
-### 3.4. ⚡ Emulador de Bancada EVSE (Modo 3 - IEC 61851-1 e IEC 62196-2)
-* **Core (`src/DevSandbox.Core/Bancada/`):**
-  * `EstadoCaboPP.cs`: Mapeamento das resistências no Pino de Proximidade (PP) entre PP e PE conforme IEC 62196-2 (Cabo 0 a 6: Circuito Aberto, 4700 Ω, 1500 Ω [13A], 680 Ω [20A], 220 Ω [32A], 100 Ω [63A], 47 Ω [Falha]). Extensões para obtenção de comandos seriais (`cabo X`).
-  * `EstadoVeiculoCP.cs`: Mapeamento dos estados do veículo no Pino Piloto de Controle (CP) conforme o nível de tensão da borda positiva do sinal PWM (Estado A: +12V [Desconectado], Estado B: +9V [Conectado], Estado C: +6V [Carregando], Estado D: +3V [Carregando c/ Ventilação], Estado E: 0V [Falha/Curto]). Extensões para comandos seriais (`estado X`).
-  * `BancadaEngine.cs`: Coordena o emulador, gerenciando conexão serial com watchdog de reconexão automática, controle de estados atuais e despacho de comandos seriais.
-* **UI (`src/DevSandbox.UI/Forms/FormBancada.cs`):**
-  * Interface desktop dividida em três colunas operacionais: Emulador do Cabo (PP), Emulador de Estados do Veículo (CP) e Monitor Serial com terminal de log e entrada de comandos manuais.
-* **Testes (`tests/DevSandbox.Tests/BancadaEngineTests.cs`):**
-  * 16 testes unitários validando a formatação dos comandos CLI, atualização de propriedades, notificação de eventos e tratamento de comandos manuais.
+### 3.4. 🔢 Conversor de Bases Numéricas (Calculadora Hex)
+* **Motor de Conversão e Parsing (`CalculadoraHex.cs`, `BaseNumerica.cs`):**
+  * Conversões bidirecionais de 64 bits (`ulong`/`long` em complemento de dois).
+  * **Detecção Inteligente no Core (`DetectarBase` / `ConverterEntrada`):** Prefixo `0x`/`0X` indica hexadecimal; `0b`/`0B` seguido de bits indica binário; presença de caracteres hexadecimais (`A–F`, `a–f`) indica hexadecimal; demais entradas são processadas como decimal.
+  * **Convenções Estritas de Validação:**
+    * Separadores livres: espaços, tabulações e sublinhados (`_`).
+    * Hífens (`-`): permitidos **exclusivamente como separadores entre dígitos** (ex.: `FF-FF`, `1100-0011`).
+    * Rejeição de Sinal Negativo: Números negativos lançam `FormatException` com mensagem amigável.
+    * Entradas sem dígitos válidos lançam `ArgumentException`.
+* **Interface Visual (`FormCalculadora.cs`):**
+  * Apresentação binária com quebra automática em duas linhas de 32 bits (8 nibbles por linha) para números de 64 bits.
+  * Botões de cópia rápida com debounce via `HashSet<FluentButton>` para evitar reentrância visual durante o feedback "✓ Copiado!".
 
 ---
 
 ### 3.5. 🎨 Sistema Visual Windows 11 Fluent Design (WinUI 3 Dark)
-* **Tokens e Temas (`src/DevSandbox.UI/Common/ThemeManager.cs`):**
-  * Integração com a API nativa `dwmapi.dll` (`DwmSetWindowAttribute`) ativando o modo escuro na barra de título do Windows 10/11.
-  * Paleta oficial Windows 11 Fluent Dark: Fundo Mica `#202020`, Cards `#2B2B2B` com bordas `#383838`, e cor de acento Ciano/Azul Vibrante (`#4CC2FF`).
-  * Utilitário `CriarRetanguloArredondado(Rectangle, int)` para renderização GDI+ antialiased com cantos curvos.
-* **Componentes Fluent Reutilizáveis:**
-  * **`FluentButton.cs`**: Botão com cantos arredondados, suporte ao modo *Accent* (`#4CC2FF` com texto preto) e modo secundário (`#383838` com texto branco), além de efeitos interativos de *hover* e *press*.
-  * **`FluentCard.cs`**: Painel de superfície elevada com cantos arredondados (raio 8px), borda de 1px e suporte a destaque suave no *hover*.
-  * **`FluentTextBox.cs`**: Caixa de texto com fundo profundo (`#1E1E1E`), cantos arredondados e a assinatura visual do Windows 11: **linha inferior de destaque ciano (`#4CC2FF`) de 2.5px quando focada**.
-  * **`FluentToggle.cs`**: Chave de alternância (Toggle Switch) em formato de pílula arredondada fiel ao WinUI 3 (Off com contorno cinza / On com preenchimento em `#4CC2FF` e thumb escuro).
-  * **Tratamento de Cantos e Duplo Buffer (`ObterCorFundoEfetiva`):** Todos os controles customizados realizam `g.Clear()` com a cor real do container pai antes da renderização antialiased, eliminando qualquer vestígio de cantos pretos em geometrias arredondadas no Windows Forms.
+* **Gerenciador de Temas (`ThemeManager.cs`):**
+  * Ativação de barra de título nativa escura via DWM (`dwmapi.dll`).
+  * **Cache Estático de Fontes GDI+:** Fontes compartilhadas (`FontePadrao`, `FonteBotao`, `FonteEntrada`, `FonteTerminal`, `FonteSubtitulo`) instanciadas uma única vez para mitigar consumo de handles GDI do sistema operacional.
+  * **Navegação por Teclado:** Método `DesenharFoco(Graphics g, Rectangle area, int raio)` que renderiza um anel interno de foco de alto contraste no padrão Fluent quando um controle customizado recebe foco por Tab/teclado.
 
 ---
 
-### 3.6. 🏠 Hub Central (`MainForm`)
-* **Arquivo:** `src/DevSandbox.UI/Forms/MainForm.cs`
-* **Recursos:**
-  * Atua como painel de controle principal (Dashboard) para navegação entre as ferramentas.
-  * Cards visuais interativos com efeito hover e clique expandido (Supervisório, Pomodoro, Calculadora e Bancada EVSE).
-  * Gerencia a exibição e retorno gracioso das janelas filhas com `ShowDialog()`.
+## 🔬 4. Firmware e Simulação da Bancada
+
+### 4.1. Firmware Embarcado (`firmware/Bancada/`)
+* **Stack:** C++ para microcontroladores AVR com PlatformIO e FreeRTOS.
+* **Hardware Alvo:**
+  * **ATmega2560 (Arduino Mega):** Suporte integral aos relés do CP (S7–S12) e PP (S1–S6).
+  * **ATmega328P (Arduino Nano):** Suporte exclusivo aos relés do PP (responde `ERRO` para comandos de CP).
+* **Segurança Operacional:**
+  * **Break-Before-Make por Interseção:** Desliga apenas os relés que não fazem parte do novo estado, aguarda uma pausa mínima de 20 ms (somente quando há relés saindo e novos relés entrando), e liga os relés necessários. Trocas que apenas abrem ou apenas fecham relés ocorrem sem atraso desnecessário.
+  * **Boot Seguro:** Na inicialização, todos os relés são desenergizados para evitar configurações indesejadas no circuito elétrico.
+  * **Reaplicação de Estado:** Reenviar o mesmo estado é tratado como *no-op*. Para forçar um desligamento temporário, comanda-se `estado ax` antes do estado pretendido.
+* **Manual Técnico:** Documentação detalhada disponível em [firmware/Bancada/README.md](firmware/Bancada/README.md).
+
+### 4.2. Simulação em Circuito Virtual (`simulacao/Bancada/`)
+* **Simulador:** SimulIDE 2.0.
+* **Circuito:** `simulacao/Bancada/circuito_bancada_mega.sim1`, configurado para o microcontrolador Arduino Mega 2560, relés do CP e PP, voltímetros de aferição e interface serial COM virtual.
+* **Integração de Portas Seriais Virtuais:**
+  * Configurado com par virtual **COM1 ↔ COM2** no **HHD Virtual Serial Port Tools**.
+  * SimulIDE conectado na **COM1** (9600 bps).
+  * `DevSandbox.UI` conectado na **COM2** (9600 bps).
+* **Guia Operacional:** Consulte o passo a passo completo em [simulacao/Bancada/GUIA_SIMULACAO_BANCADA.md](simulacao/Bancada/GUIA_SIMULACAO_BANCADA.md).
 
 ---
 
-## 🔄 4. Fluxo para Implementar Novos Módulos
+## 📦 5. Estratégia de Build e Distribuição
 
-Ao criar uma nova ferramenta no repositório, siga sempre esta sequência:
-
-1. **Crie a Lógica no Core:**
-   * Adicione o novo namespace/pasta em `src/DevSandbox.Core/<NomeDoModulo>/`.
-   * Mantenha as classes puras, assíncronas quando necessário, e expor eventos/métodos claros.
-2. **Crie a Suíte de Testes:**
-   * Adicione `<NomeDoModulo>Tests.cs` dentro de `tests/DevSandbox.Tests/`.
-   * Cubra cenários de sucesso, entradas inválidas e limites numéricos/temporais.
-3. **Crie a Interface Gráfica:**
-   * Crie o formulário em `src/DevSandbox.UI/Forms/Form<NomeDoModulo>.cs`.
-   * Invoque `ThemeManager.AplicarBarraDeTituloEscura(this)` e aplique o tema.
-   * Conecte os componentes visuais ao motor do Core.
-4. **Vincule ao Hub:**
-   * Crie um novo Card na `MainForm` (`src/DevSandbox.UI/Forms/MainForm.cs`) e implemente a chamada do formulário.
+* **Configuração Centralizada (`Directory.Build.props`):**
+  * Todos os projetos da solução herdam `TreatWarningsAsErrors=true` e `AnalysisLevel=latest-recommended`.
+  * A regra `CopyToDist` está configurada para atuar exclusivamente na configuração `Release`, evitando poluição da raiz em compilações `Debug`.
+* **Geração de Executável Standalone (`publish-standalone.ps1`):**
+  * Compila `DevSandbox.UI` em modo Release autocontido (Single-File) para Windows x64.
+  * O binário executável final de ~49 MB é gravado em `dist/standalone/DevSandbox.UI.exe`.
+* **Distribuição Oficial (GitHub Releases):**
+  * A pasta `app/` foi removida do rastreamento do repositório Git e incluída no `.gitignore`.
+  * A partir da versão **`v1.0.0`**, as distribuições oficiais dos binários são realizadas anexando os executáveis standalone diretamente aos lançamentos do GitHub vinculados a tags de versão semântica.
 
 ---
 
-## 🚀 5. Comandos Úteis
+## 🧪 6. Status Atual de Qualidade
 
-### Executar Testes Automatizados
-```powershell
-dotnet test dev-sandbox.slnx
-```
-
-### Compilar toda a solução
-```powershell
-dotnet build dev-sandbox.slnx
-```
-
-### Executar a Aplicação Visual (UI)
-```powershell
-dotnet run --project src/DevSandbox.UI/DevSandbox.UI.csproj
-```
-
-### Executar Diretamente o Executável (.exe)
-Sempre que a solução é compilada, os executáveis são automaticamente copiados para a pasta `dist/` na raiz. Você pode simplesmente abrir a pasta e clicar duas vezes em:
-```plaintext
-dist/DevSandbox.UI.exe
-```
-
-### Gerar Executável Único para Enviar a Qualquer Pessoa (Single-File Standalone)
-Gera um único `.exe` de ~49 MB com o .NET 10 e tudo embutido. Quem receber esse arquivo não precisa instalar nada para rodar:
-```powershell
-.\publish-standalone.ps1
-```
-Ou via CLI:
-```powershell
-dotnet publish src/DevSandbox.UI/DevSandbox.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/standalone
-```
-O arquivo gerado fica pronto em `dist/standalone/DevSandbox.UI.exe` e `app/DevSandbox.UI.exe`.
-
----
-
-## 📊 6. Status Atual de Qualidade
-* **Testes Automatizados:** 44 testes passando (0 falhas).
-* **Compilação:** 0 erros, 0 avisos em .NET 10.0.
-* **Cobertura:** Todos os 4 motores do Core possuem testes unitários dedicados.
+* **Testes Automatizados:** **345 testes aprovados (0 falhas)** executados com NUnit 4 sob .NET 10.0.
+* **Compilação:** 0 erros e 0 avisos em toda a solução, cumprindo a diretiva estrita de `TreatWarningsAsErrors`.
+* **Cobertura de Código:** Cerca de **85% de cobertura de linhas** no `DevSandbox.Core` aferida via relatório Cobertura XML.
+* **Validação Textual:** Cobertura integral da matriz de comandos e respostas do firmware com testes dedicados em `QaBancada3cTests.cs`, `BancadaCPTests.cs` e `BancadaRevisaoTests.cs`.
