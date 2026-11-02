@@ -42,6 +42,7 @@ namespace DevSandbox.UI.Common
         public static readonly Color CorAcentoHover = Color.FromArgb(71, 180, 236);    // #47B4EC
         public static readonly Color CorAcentoPress = Color.FromArgb(65, 165, 216);    // #41A5D8
         public static readonly Color CorAcentoTexto = Color.FromArgb(0, 0, 0);          // #000000 (Alto contraste sobre o acento)
+        public static readonly Color CorAcentoBrilho = Color.FromArgb(112, 212, 255);  // #70D4FF (Pulso de "reenviado" da Bancada)
 
         // --- Compatibilidade e Cores de Alerta ---
         public static readonly Color AzulPrimario = CorAcento;

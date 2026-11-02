@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DevSandbox.Core.Bancada;
 using DevSandbox.UI.Common;
@@ -38,10 +39,25 @@ namespace DevSandbox.UI.Forms
         private readonly Dictionary<GrupoEstadoCP, RadioButton> _radiosCP;
         private readonly Dictionary<RadioButton, EstadoCaboPP> _radiosPP;
         private readonly Dictionary<FluentButton, VariacaoEstadoCP> _botoesVariacao;
+        private readonly Dictionary<int, LedIndicator> _ledsPorPino;
         private readonly ToolTip _dicas;
 
-        /// <summary>Estados visuais do indicador (seção 6 do design), mais "local" e "aguardando".</summary>
-        private enum Situacao { Local, Aguardando, Confirmado, NaoEnviado, ErroFirmware, SemResposta }
+        // Reenvio no clique repetido (seção 7 do design v2). O RadioButton dispara CheckedChanged e DEPOIS Click
+        // no mesmo clique: o radio marcado pelo CheckedChanged fica aqui para o Click seguinte não reenviar.
+        private RadioButton? _radioRecemMarcado;
+
+        // Pulso "⟳ Reenviado" (400 ms): _reenvioXX = o pedido em curso é um reenvio ainda sem conclusão;
+        // _restaurarXX = conclusão confirmada a mostrar no formato padrão quando o pulso acabar.
+        private const int DuracaoPulsoReenvioMs = 400;
+        private readonly System.Windows.Forms.Timer _timerPulsoCP;
+        private readonly System.Windows.Forms.Timer _timerPulsoPP;
+        private bool _reenvioCP;
+        private bool _reenvioPP;
+        private (EstadoVeiculoCP Estado, string Detalhe)? _restaurarCP;
+        private (EstadoCaboPP Cabo, string Detalhe)? _restaurarPP;
+
+        /// <summary>Estados visuais do indicador (seção 8 do design v2), mais "local" (nada enviado ainda).</summary>
+        private enum Situacao { Local, Aguardando, Reenviado, Confirmado, ReenviadoConfirmado, NaoEnviado, ErroFirmware, SemResposta }
 
         public FormBancada()
         {
@@ -51,6 +67,10 @@ namespace DevSandbox.UI.Forms
             _dicas = new ToolTip(components);
             _timerRetentativaStatus = new System.Windows.Forms.Timer(components) { Interval = AtrasoRetentativaStatusMs };
             _timerRetentativaStatus.Tick += TimerRetentativaStatus_Tick;
+            _timerPulsoCP = new System.Windows.Forms.Timer(components) { Interval = DuracaoPulsoReenvioMs };
+            _timerPulsoCP.Tick += TimerPulsoCP_Tick;
+            _timerPulsoPP = new System.Windows.Forms.Timer(components) { Interval = DuracaoPulsoReenvioMs };
+            _timerPulsoPP.Tick += TimerPulsoPP_Tick;
 
             _radiosCP = new()
             {
@@ -76,10 +96,31 @@ namespace DevSandbox.UI.Forms
                 [btnVarNom] = VariacaoEstadoCP.Nominal,
                 [btnVarInf] = VariacaoEstadoCP.Inferior
             };
+            _ledsPorPino = new()
+            {
+                [30] = ledD30_PE,
+                [31] = ledD31_Falha,
+                [29] = ledD29_BHab,
+                [28] = ledD28_BSel,
+                [27] = ledD27_CDHab,
+                [26] = ledD26_CDSel,
+                [25] = ledD25_CHab,
+                [24] = ledD24_CSel,
+                [23] = ledD23_DHab,
+                [22] = ledD22_DSel
+            };
+
+            // Seleção (CheckedChanged) e reenvio (Click no já marcado) dos radios de PP e CP
+            foreach (RadioButton rb in _radiosPP.Keys.Concat(_radiosCP.Values))
+            {
+                rb.CheckedChanged += rbOpcao_CheckedChanged;
+                rb.Click += rbOpcao_Click;
+            }
 
             ThemeManager.AplicarBarraDeTituloEscura(this);
             AplicarTema();
             ConfigurarRotulos();
+            ConfigurarReles();
 
             CarregarPortasDisponiveis();
             CarregarBaudRates();
@@ -88,6 +129,8 @@ namespace DevSandbox.UI.Forms
             _engine.RespostaRecebida += Engine_RespostaRecebida;
             _engine.ComandoConcluido += Engine_ComandoConcluido;
             _engine.StatusCPRecebido += Engine_StatusCPRecebido;
+            _engine.RelesCPAtualizados += Engine_RelesCPAtualizados;
+            _engine.RespostaMultilinhaRecebida += Engine_RespostaMultilinhaRecebida;
             _engine.ConexaoPerdida += Engine_ConexaoPerdida;
             _engine.Reconectado += Engine_Reconectado;
 
@@ -127,9 +170,20 @@ namespace DevSandbox.UI.Forms
             btnEnviar.IsAccent = true;
             btnLimpar.IsAccent = false;
             btnStatusCP.IsAccent = false;
+            btnStatusPP.IsAccent = false;
+            btnDebugStack.IsAccent = false;
+            btnHelp.IsAccent = false;
 
-            txtTerminal.BackColor = ThemeManager.FundoInput;
+            // Painel de relés: fundo sutil #242424 com borda #333333 (raio 6)
+            pnlRelesCP.CardColor = Color.FromArgb(36, 36, 36);
+            pnlRelesCP.BorderColor = Color.FromArgb(51, 51, 51);
+            pnlRelesCP.CornerRadius = 6;
+            lblTituloReles.ForeColor = ThemeManager.TextoSecundario;
+
+            txtTerminal.BackColor = Color.FromArgb(16, 16, 16);
             txtTerminal.ForeColor = ThemeManager.VerdeTerminal;
+
+            chkAutoScroll.ForeColor = ThemeManager.TextoSecundario;
 
             txtComando.BackColor = ThemeManager.FundoInput;
             txtComando.ForeColor = ThemeManager.TextoPrincipal;
@@ -165,16 +219,63 @@ namespace DevSandbox.UI.Forms
             }
 
             _dicas.SetToolTip(lblNotaPP, $"Resistor da bancada física: {nota}.");
-            _dicas.SetToolTip(btnStatusCP, "Pede ao firmware o estado CP atual (sem alterar a seleção).");
-            _dicas.SetToolTip(pnlVariacaoCP, "Limites de tolerância: só nos estados B, C e D.");
+            _dicas.SetToolTip(btnStatusCP, "Pede ao firmware o estado CP atual e os relés ativos (sem alterar a seleção).");
+            _dicas.SetToolTip(btnStatusPP, "Consulta o canal do cabo PP ativo no firmware.");
+            _dicas.SetToolTip(btnDebugStack, "Inspeciona a margem de segurança da pilha de memória das tarefas FreeRTOS.");
+            _dicas.SetToolTip(btnHelp, "Solicita ao firmware a lista de comandos seriais disponíveis.");
+            _dicas.SetToolTip(btnLimpar, "Limpa o histórico de mensagens do monitor serial.");
+            _dicas.SetToolTip(chkAutoScroll, "Mantém o monitor rolando até a última linha recebida.");
+            _dicas.SetToolTip(pnlVariacaoCP, "Limites de tolerância: só nos estados B, C e D. Clicar na variação ativa reenvia o comando.");
         }
+
+        /// <summary>
+        /// Função de cada relé no circuito CP (tabela 5.1 do design v2): componente da PCB, símbolo e função,
+        /// só para a dica de ferramenta. O nome lógico vem do Core (<see cref="RelesCP.ObterNome"/>).
+        /// </summary>
+        private static readonly Dictionary<int, string> FuncaoRele = new()
+        {
+            [30] = "RLY6 / S7: habilitação geral de PE. Conecta o diodo do veículo ao condutor de aterramento.",
+            [31] = "RLY1 / S8: curto-circuito CP-PE antes do diodo (exclusivo do estado E).",
+            [29] = "RLY7 / S9.1: habilitação do ramo resistivo do estado B (+9 V).",
+            [28] = "RLY2 / S9.2: seleção de tolerância do estado B.",
+            [27] = "RLY5 / S10_C: habilitação do ramo paralelo dos estados C e D.",
+            [26] = "RLY8 / S10_D: comutação entre o ramo C e o ramo D.",
+            [25] = "RLY3 / S11.1: habilitação do resistor paralelo do estado C (+6 V).",
+            [24] = "RLY4 / S11.2: seleção de tolerância do estado C.",
+            [23] = "RLY9 / S12.1: habilitação do resistor paralelo do estado D (+3 V).",
+            [22] = "RLY10 / S12.2: seleção de tolerância do estado D."
+        };
+
+        private void ConfigurarReles()
+        {
+            foreach (var (pino, led) in _ledsPorPino)
+            {
+                led.Text = $"D{pino}: {RelesCP.ObterNome(pino)}";
+                led.Perigo = pino == 31; // D31 (falha/curto) acende em vermelho
+                _dicas.SetToolTip(led, FuncaoRele.TryGetValue(pino, out string? funcao) ? $"Relé D{pino} ({funcao})" : $"Relé D{pino}");
+            }
+            _dicas.SetToolTip(pnlRelesCP, "Relés do CP ativos segundo o último [STATUS CP] do firmware.");
+            ApagarReles();
+        }
+
+        /// <summary>Acende os LEDs dos pinos informados pelo firmware e apaga os demais.</summary>
+        private void MostrarReles(IReadOnlyList<int> pinosAtivos)
+        {
+            foreach (var (pino, led) in _ledsPorPino)
+            {
+                led.Ligado = pinosAtivos.Contains(pino);
+            }
+        }
+
+        /// <summary>Sem conexão ou sem confirmação do firmware: todos os LEDs apagados.</summary>
+        private void ApagarReles() => MostrarReles(Array.Empty<int>());
 
         private static string RotuloGrupo(GrupoEstadoCP grupo) => grupo switch
         {
             GrupoEstadoCP.A => "Desconectado",
             GrupoEstadoCP.B => "Conectado / Standby",
-            GrupoEstadoCP.C => "Carga normal",
-            GrupoEstadoCP.D => "Carga c/ ventilação",
+            GrupoEstadoCP.C => "Carga Normal",
+            GrupoEstadoCP.D => "Carga c/ Ventilação",
             GrupoEstadoCP.E => "Falha / Curto",
             _ => grupo.ToString()
         };
@@ -276,7 +377,7 @@ namespace DevSandbox.UI.Forms
         {
             if (conectado)
             {
-                lblStatus.Text = $"Conectado ({cboPortas.Text})";
+                lblStatus.Text = $"Conectado ({cboPortas.Text} @ {cboBaudRate.Text} bps)";
                 lblStatus.ForeColor = ThemeManager.VerdeTerminal;
                 pnlStatusLed.BackColor = ThemeManager.VerdeTerminal;
 
@@ -290,6 +391,7 @@ namespace DevSandbox.UI.Forms
             }
             else
             {
+                ApagarReles();
                 lblStatus.Text = "Desconectado";
                 lblStatus.ForeColor = ThemeManager.TextoSecundario;
                 pnlStatusLed.BackColor = ThemeManager.VermelhoPerigo;
@@ -305,15 +407,77 @@ namespace DevSandbox.UI.Forms
             }
         }
 
-        // ------------------------------------------------------------------ PP
+        // ------------------------------------------------------------------ Seleção e reenvio (PP e CP)
 
-        private void rbPP_CheckedChanged(object? sender, EventArgs e)
+        /// <summary>Mudança de seleção (mouse, setas ou Espaço num radio novo): envia o cabo/estado escolhido.</summary>
+        private void rbOpcao_CheckedChanged(object? sender, EventArgs e)
         {
             if (_carregandoUI) return;
-            if (sender is not RadioButton rb || !rb.Checked) return;
-            if (!_radiosPP.TryGetValue(rb, out EstadoCaboPP cabo)) return;
+            if (sender is not RadioButton { Checked: true } rb) return;
 
-            MostrarSelecaoCabo(cabo, Situacao.Aguardando); // antes do Core: a conclusão nunca é sobrescrita
+            // O Click deste mesmo clique (vem logo depois) não deve reenviar. Se não vier Click (mudança sem
+            // clique), a marca é limpa ao fim da mensagem atual para não engolir um reenvio futuro.
+            _radioRecemMarcado = rb;
+            InvocarNaUI(() => _radioRecemMarcado = null);
+
+            if (_radiosPP.TryGetValue(rb, out EstadoCaboPP cabo))
+            {
+                EnviarCabo(cabo, reenvio: false);
+                return;
+            }
+
+            GrupoEstadoCP grupo = _radiosCP.First(kv => kv.Value == rb).Key;
+            if (grupo != _grupoCP)
+            {
+                _variacaoCP = VariacaoEstadoCP.Nominal; // troca de grupo volta à variação nominal
+            }
+            _grupoCP = grupo;
+
+            AtualizarVariacaoUI();
+            EnviarEstadoSelecionado(reenvio: false);
+        }
+
+        /// <summary>
+        /// Click (mouse ou Espaço) no radio JÁ marcado: reenvia o mesmo comando. No clique que muda a seleção
+        /// o envio já foi feito pelo CheckedChanged, então aqui não há envio duplo.
+        /// </summary>
+        private void rbOpcao_Click(object? sender, EventArgs e)
+        {
+            if (_carregandoUI) return;
+            if (sender is not RadioButton { Checked: true } rb) return;
+
+            if (ReferenceEquals(_radioRecemMarcado, rb))
+            {
+                _radioRecemMarcado = null;
+                return;
+            }
+
+            if (_radiosPP.TryGetValue(rb, out EstadoCaboPP cabo))
+            {
+                EnviarCabo(cabo, reenvio: true);
+            }
+            else if (_radiosCP.ContainsValue(rb))
+            {
+                EnviarEstadoSelecionado(reenvio: true);
+            }
+        }
+
+        // ------------------------------------------------------------------ PP
+
+        private void EnviarCabo(EstadoCaboPP cabo, bool reenvio)
+        {
+            _reenvioPP = reenvio;
+            _restaurarPP = null;
+            _timerPulsoPP.Stop();
+
+            if (reenvio)
+            {
+                AppendTerminal($"⟳ Reenviando ao firmware: {cabo.ObterComandoSerial()} (reenvio manual)");
+                _timerPulsoPP.Start();
+            }
+
+            // Indicador antes do Core: a conclusão (inclusive o NaoEnviado síncrono) nunca é sobrescrita
+            MostrarSelecaoCabo(cabo, reenvio ? Situacao.Reenviado : Situacao.Aguardando);
             _enviandoPP = true;
             try
             {
@@ -338,38 +502,39 @@ namespace DevSandbox.UI.Forms
             _dicas.SetToolTip(lblStatusCabo, detalhe ?? cabo.ObterDescricao());
         }
 
-        // ------------------------------------------------------------------ CP (dois níveis)
-
-        private void rbCP_CheckedChanged(object? sender, EventArgs e)
+        private void btnStatusPP_Click(object? sender, EventArgs e)
         {
-            if (_carregandoUI) return;
-            if (sender is not RadioButton rb || !rb.Checked) return;
-
-            GrupoEstadoCP grupo = _radiosCP.First(kv => kv.Value == rb).Key;
-            if (grupo != _grupoCP)
-            {
-                _variacaoCP = VariacaoEstadoCP.Nominal; // troca de grupo volta à variação nominal
-            }
-            _grupoCP = grupo;
-
-            AtualizarVariacaoUI();
-            EnviarEstadoSelecionado();
+            _engine.SolicitarStatusCabo(); // o canal chega em CaboConfirmado; NaoEnviado/ERRO via ComandoConcluido
         }
+
+        // ------------------------------------------------------------------ CP (dois níveis)
 
         private void btnVariacao_Click(object? sender, EventArgs e)
         {
             if (!_grupoCP.TemVariacao()) return;
             if (sender is not FluentButton btn || !_botoesVariacao.TryGetValue(btn, out VariacaoEstadoCP variacao)) return;
 
+            bool reenvio = variacao == _variacaoCP; // clicar na variação já ativa reenvia o comando
             _variacaoCP = variacao;
             AtualizarVariacaoUI();
-            EnviarEstadoSelecionado();
+            EnviarEstadoSelecionado(reenvio);
         }
 
-        private void EnviarEstadoSelecionado()
+        private void EnviarEstadoSelecionado(bool reenvio)
         {
             EstadoVeiculoCP estado = EstadoSelecionadoCP;
-            MostrarSelecaoCP(estado, Situacao.Aguardando); // antes do Core: a conclusão nunca é sobrescrita
+            _reenvioCP = reenvio;
+            _restaurarCP = null;
+            _timerPulsoCP.Stop();
+
+            if (reenvio)
+            {
+                AppendTerminal($"⟳ Reenviando ao firmware: {estado.ObterComandoSerial()} (reenvio manual)");
+                _timerPulsoCP.Start();
+            }
+
+            // Indicador antes do Core: a conclusão (inclusive o NaoEnviado síncrono) nunca é sobrescrita
+            MostrarSelecaoCP(estado, reenvio ? Situacao.Reenviado : Situacao.Aguardando);
             _enviandoCP = true;
             try
             {
@@ -409,7 +574,7 @@ namespace DevSandbox.UI.Forms
         {
             VariacaoEstadoCP.Superior => "+ Sup",
             VariacaoEstadoCP.Inferior => "− Inf",
-            _ => "Nominal"
+            _ => "• Nom •"
         };
 
         private void MostrarSelecaoCP(EstadoVeiculoCP estado, Situacao situacao, string? detalhe = null)
@@ -425,11 +590,13 @@ namespace DevSandbox.UI.Forms
         private static (string Sufixo, Color Cor) AparenciaDe(Situacao situacao) => situacao switch
         {
             Situacao.Local => ("(seleção local, não enviada)", ThemeManager.TextoSecundario),
-            Situacao.Aguardando => ("⋯ aguardando confirmação", ThemeManager.TextoSecundario),
+            Situacao.Aguardando => ("⋯ aguardando confirmação...", ThemeManager.TextoSecundario),
+            Situacao.Reenviado => ("⟳ Reenviado ao firmware...", ThemeManager.CorAcentoBrilho),
             Situacao.Confirmado => ("✓ confirmado pelo firmware", ThemeManager.CorAcento),
-            Situacao.NaoEnviado => ("[não enviado]", ThemeManager.LaranjaAlerta),
-            Situacao.SemResposta => ("⚠ sem confirmação", ThemeManager.LaranjaAlerta),
-            Situacao.ErroFirmware => ("❌ ERRO: rejeitado pelo hardware!", ThemeManager.VermelhoPerigo),
+            Situacao.ReenviadoConfirmado => ($"✓ Reenviado e confirmado [{DateTime.Now:HH:mm:ss}]", ThemeManager.CorAcento),
+            Situacao.NaoEnviado => ("⚠ seleção local [não enviado]", ThemeManager.LaranjaAlerta),
+            Situacao.SemResposta => ("⚠ sem resposta do firmware", ThemeManager.LaranjaAlerta),
+            Situacao.ErroFirmware => ("❌ ERRO: Rejeitado pelo hardware!", ThemeManager.VermelhoPerigo),
             _ => ("", ThemeManager.TextoSecundario)
         };
 
@@ -504,6 +671,53 @@ namespace DevSandbox.UI.Forms
         private void btnStatusCP_Click(object? sender, EventArgs e)
         {
             _engine.SolicitarStatusCP(); // NaoEnviado/ERRO/sem resposta chegam via ComandoConcluido
+        }
+
+        // ------------------------------------------------------------------ Pulso de reenvio (400 ms)
+
+        // Fim do pulso: ainda sem conclusão -> "aguardando"; já confirmado -> formato padrão de confirmação
+        private void TimerPulsoCP_Tick(object? sender, EventArgs e)
+        {
+            _timerPulsoCP.Stop();
+            if (!PodeAtualizarUI) return;
+
+            if (_reenvioCP)
+            {
+                MostrarSelecaoCP(EstadoSelecionadoCP, Situacao.Aguardando);
+            }
+            else if (_restaurarCP is { } r)
+            {
+                _restaurarCP = null;
+                MostrarSelecaoCP(r.Estado, Situacao.Confirmado, r.Detalhe);
+            }
+        }
+
+        private void TimerPulsoPP_Tick(object? sender, EventArgs e)
+        {
+            _timerPulsoPP.Stop();
+            if (!PodeAtualizarUI) return;
+
+            if (_reenvioPP)
+            {
+                MostrarSelecaoCabo(_engine.CaboAtual, Situacao.Aguardando);
+            }
+            else if (_restaurarPP is { } r)
+            {
+                _restaurarPP = null;
+                MostrarSelecaoCabo(r.Cabo, Situacao.Confirmado, r.Detalhe);
+            }
+        }
+
+        // ------------------------------------------------------------------ Diagnóstico do firmware
+
+        private void btnDebugStack_Click(object? sender, EventArgs e)
+        {
+            _engine.SolicitarDebugStack(); // resposta via RespostaMultilinhaRecebida; NaoEnviado via ComandoConcluido
+        }
+
+        private void btnHelp_Click(object? sender, EventArgs e)
+        {
+            _engine.SolicitarHelp(); // linhas via RespostaRecebida/RespostaMultilinhaRecebida
         }
 
         // ------------------------------------------------------------------ Terminal / comando manual
@@ -597,13 +811,45 @@ namespace DevSandbox.UI.Forms
             if (c.Estado is { } estado && EhPedidoAtual(c, _idPedidoCP, _enviandoCP))
             {
                 _idPedidoCP = 0;
-                MostrarSelecaoCP(estado, situacao, detalhe);
+                if (_reenvioCP && c.Resultado == ResultadoComando.Confirmado)
+                {
+                    // "✓ Reenviado e confirmado" por um pulso; depois volta ao formato padrão (TimerPulsoCP_Tick)
+                    MostrarSelecaoCP(estado, Situacao.ReenviadoConfirmado, detalhe);
+                    _restaurarCP = (estado, detalhe);
+                    _timerPulsoCP.Stop();
+                    _timerPulsoCP.Start();
+                }
+                else
+                {
+                    _timerPulsoCP.Stop();
+                    MostrarSelecaoCP(estado, situacao, detalhe);
+                }
+                _reenvioCP = false;
             }
 
             if (c.Cabo is { } cabo && EhPedidoAtual(c, _idPedidoPP, _enviandoPP))
             {
                 _idPedidoPP = 0;
-                MostrarSelecaoCabo(cabo, situacao, detalhe);
+                if (_reenvioPP && c.Resultado == ResultadoComando.Confirmado)
+                {
+                    MostrarSelecaoCabo(cabo, Situacao.ReenviadoConfirmado, detalhe);
+                    _restaurarPP = (cabo, detalhe);
+                    _timerPulsoPP.Stop();
+                    _timerPulsoPP.Start();
+                }
+                else
+                {
+                    _timerPulsoPP.Stop();
+                    MostrarSelecaoCabo(cabo, situacao, detalhe);
+                }
+                _reenvioPP = false;
+            }
+
+            // Os relés ativos só vêm no [STATUS CP]: depois de cada OK de estado (da UI ou manual), pede o status,
+            // a menos que um estado mais novo da UI ainda esteja pendente (o OK dele pedirá o status)
+            if (c.Estado != null && c.Resultado == ResultadoComando.Confirmado && _idPedidoCP == 0 && _engine.EstaConectado)
+            {
+                _engine.SolicitarStatusCP();
             }
 
             // DTR: o status pedido ao conectar se perdeu no reinício da placa -> uma nova tentativa em 2,5 s
@@ -635,11 +881,42 @@ namespace DevSandbox.UI.Forms
             AtualizarFirmware();
         }
 
+        private void Engine_RelesCPAtualizados(object? sender, IReadOnlyList<int> pinos)
+        {
+            if (!NaThreadDaUI(() => Engine_RelesCPAtualizados(sender, pinos))) return;
+
+            MostrarReles(pinos);
+        }
+
+        /// <summary>
+        /// Resposta completa de help/debug stack. As linhas já aparecem uma a uma como [RX]; aqui só o resumo
+        /// (o diagnóstico de stack interpretado pelo Core, ou o aviso de que nada chegou no prazo).
+        /// </summary>
+        private void Engine_RespostaMultilinhaRecebida(object? sender, RespostaMultilinha r)
+        {
+            if (!NaThreadDaUI(() => Engine_RespostaMultilinhaRecebida(sender, r))) return;
+
+            if (r.Linhas.Count == 0)
+            {
+                AppendTerminal($"[sem resposta] {r.Comando} (nenhuma linha recebida no prazo)");
+            }
+            else if (r.Stack is { } s)
+            {
+                AppendTerminal($"[STACK] SerialCLI livre: {s.SerialCLILivre} de {s.SerialCLITotal} | " +
+                               $"Blink livre: {s.BlinkLivre} de {s.BlinkTotal}");
+            }
+            else
+            {
+                AppendTerminal($"ℹ️ {r.Comando}: {r.Linhas.Count} linha(s) recebida(s).");
+            }
+        }
+
         private void Engine_ConexaoPerdida(object? sender, EventArgs e)
         {
             if (!NaThreadDaUI(() => Engine_ConexaoPerdida(sender, e))) return;
 
             CancelarRetentativaStatus();
+            ApagarReles();
             lblStatus.Text = "Conexão Perdida (Reconectando...)";
             lblStatus.ForeColor = ThemeManager.LaranjaAlerta;
             pnlStatusLed.BackColor = ThemeManager.LaranjaAlerta;
@@ -668,11 +945,52 @@ namespace DevSandbox.UI.Forms
                 txtTerminal.SelectionStart = txtTerminal.TextLength;
                 txtTerminal.ScrollToCaret();
             }
-            else
+            else if (chkAutoScroll.Checked)
             {
                 txtTerminal.AppendText(linha);
             }
+            else
+            {
+                AcrescentarSemRolar(linha);
+            }
         }
+
+        // "Rolar ao final" desmarcado: acrescenta a linha mantendo a posição de leitura e a seleção do operador
+        private void AcrescentarSemRolar(string linha)
+        {
+            IntPtr h = txtTerminal.Handle;
+            int primeiraVisivel = (int)SendMessage(h, EM_GETFIRSTVISIBLELINE, IntPtr.Zero, IntPtr.Zero);
+            int inicio = txtTerminal.SelectionStart;
+            int tamanho = txtTerminal.SelectionLength;
+
+            SendMessage(h, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+            try
+            {
+                txtTerminal.AppendText(linha);
+                txtTerminal.Select(inicio, tamanho);
+                int delta = primeiraVisivel - (int)SendMessage(h, EM_GETFIRSTVISIBLELINE, IntPtr.Zero, IntPtr.Zero);
+                if (delta != 0) SendMessage(h, EM_LINESCROLL, IntPtr.Zero, delta);
+            }
+            finally
+            {
+                SendMessage(h, WM_SETREDRAW, 1, IntPtr.Zero);
+                txtTerminal.Invalidate();
+            }
+        }
+
+        private void chkAutoScroll_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (!chkAutoScroll.Checked) return;
+            txtTerminal.SelectionStart = txtTerminal.TextLength;
+            txtTerminal.ScrollToCaret();
+        }
+
+        private const int WM_SETREDRAW = 0x000B;
+        private const int EM_GETFIRSTVISIBLELINE = 0x00CE;
+        private const int EM_LINESCROLL = 0x00B6;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         // Guarda para callbacks vindos da thread da serial: a form pode estar fechando/descartada
         private bool PodeAtualizarUI => !this.IsDisposed && !this.Disposing && this.IsHandleCreated;
@@ -694,12 +1012,18 @@ namespace DevSandbox.UI.Forms
         {
             _timerRetentativaStatus.Stop();
             _timerRetentativaStatus.Tick -= TimerRetentativaStatus_Tick;
+            _timerPulsoCP.Stop();
+            _timerPulsoCP.Tick -= TimerPulsoCP_Tick;
+            _timerPulsoPP.Stop();
+            _timerPulsoPP.Tick -= TimerPulsoPP_Tick;
 
             // Desassina antes do Dispose: nenhum callback da serial chega com a form fechando
             _engine.ComandoEnviado -= Engine_ComandoEnviado;
             _engine.RespostaRecebida -= Engine_RespostaRecebida;
             _engine.ComandoConcluido -= Engine_ComandoConcluido;
             _engine.StatusCPRecebido -= Engine_StatusCPRecebido;
+            _engine.RelesCPAtualizados -= Engine_RelesCPAtualizados;
+            _engine.RespostaMultilinhaRecebida -= Engine_RespostaMultilinhaRecebida;
             _engine.ConexaoPerdida -= Engine_ConexaoPerdida;
             _engine.Reconectado -= Engine_Reconectado;
             _engine.Dispose();
