@@ -30,7 +30,8 @@ Bancada/
 │   └── ConfigHardware.h  # Definições de hardware e pinos
 ├── lib/                   # Bibliotecas e módulos reutilizáveis (POO)
 │   ├── EmuladorCabo/      # Pino PP: chaves S1..S6
-│   └── EmuladorVeiculoCP/ # Pino CP: 10 relés D22..D31 (Mega), tabela e parser
+│   ├── EmuladorVeiculoCP/ # Pino CP: 10 relés D22..D31 (Mega), tabela e parser
+│   └── SaidaSerial/       # Saída da UART0 por polling (respostas longas no FreeRTOS/SimulIDE)
 ├── src/                   # Código-fonte principal
 │   └── main.cpp           # CLI serial com FreeRTOS (Blink + SerialCLI)
 ├── tests/                 # Testes automatizados

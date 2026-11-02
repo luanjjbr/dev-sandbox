@@ -16,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "ConfigHardware.h"
+#include "SaidaSerial.h"   // TX por polling (ver lib/SaidaSerial/SaidaSerial.h)
 #include "EmuladorCabo.h"
 
 #if defined(PLACA_MEGA) || defined(__AVR_ATmega2560__)
@@ -52,44 +53,44 @@ EmuladorVeiculoCP veiculoCP(PINO_CP_K_PE, PINO_CP_K_FALHA,
 
 void exibirHelp()
 {
-    Serial.println();
-    Serial.println(F("=================================================="));
-    Serial.println(F("            COMANDOS DA BANCADA (IEC 62196)       "));
-    Serial.println(F("=================================================="));
-    Serial.println(F(" cabo 0      -> Circuito Aberto (Desliga todas as chaves)"));
-    Serial.println(F(" cabo 1      -> S1: Desconectado nominal (4700 Ohms)"));
-    Serial.println(F(" cabo 2      -> S2: Cabo 13 A (1500 Ohms)"));
-    Serial.println(F(" cabo 3      -> S3: Cabo 20 A (680 Ohms)"));
-    Serial.println(F(" cabo 4      -> S4: Cabo 32 A (220 Ohms)"));
-    Serial.println(F(" cabo 5      -> S5: Cabo 63 A (100 Ohms)"));
-    Serial.println(F(" cabo 6      -> S6: Falha de Isolacao / Curto (47 Ohms)"));
-    Serial.println(F(" cabo status -> Exibe relatorio do estado atual"));
-    Serial.println(F("--------------------------------------------------"));
-    Serial.println(F("        PILOTO DE CONTROLE - CP (IEC 61851-1)     "));
-    Serial.println(F("--------------------------------------------------"));
+    Saida.println();
+    Saida.println(F("=================================================="));
+    Saida.println(F("            COMANDOS DA BANCADA (IEC 62196)       "));
+    Saida.println(F("=================================================="));
+    Saida.println(F(" cabo 0      -> Circuito Aberto (Desliga todas as chaves)"));
+    Saida.println(F(" cabo 1      -> S1: Desconectado nominal (4700 Ohms)"));
+    Saida.println(F(" cabo 2      -> S2: Cabo 13 A (1500 Ohms)"));
+    Saida.println(F(" cabo 3      -> S3: Cabo 20 A (680 Ohms)"));
+    Saida.println(F(" cabo 4      -> S4: Cabo 32 A (220 Ohms)"));
+    Saida.println(F(" cabo 5      -> S5: Cabo 63 A (100 Ohms)"));
+    Saida.println(F(" cabo 6      -> S6: Falha de Isolacao / Curto (47 Ohms)"));
+    Saida.println(F(" cabo status -> Exibe relatorio do estado atual"));
+    Saida.println(F("--------------------------------------------------"));
+    Saida.println(F("        PILOTO DE CONTROLE - CP (IEC 61851-1)     "));
+    Saida.println(F("--------------------------------------------------"));
 #ifdef BANCADA_TEM_CP
-    Serial.println(F(" estado ax    -> AX: Veiculo nao conectado (12 V)"));
-    Serial.println(F(" estado bx+   -> BX limite superior (10 V)"));
-    Serial.println(F(" estado bx    -> BX nominal (9 V)"));
-    Serial.println(F(" estado bx-   -> BX limite inferior (8 V)"));
-    Serial.println(F(" estado cx+   -> CX limite superior (7 V)"));
-    Serial.println(F(" estado cx    -> CX nominal (6 V)"));
-    Serial.println(F(" estado cx-   -> CX limite inferior (5 V)"));
-    Serial.println(F(" estado dx+   -> DX limite superior (4 V)"));
-    Serial.println(F(" estado dx    -> DX nominal (3 V)"));
-    Serial.println(F(" estado dx-   -> DX limite inferior (2 V)"));
-    Serial.println(F(" estado e     -> E: Falha / curto CP-PE (1 V)"));
-    Serial.println(F(" estado a|b|c|d -> Atalhos para o nominal"));
-    Serial.println(F(" estado status  -> Exibe relatorio do CP"));
-    Serial.println(F(" Reles (placa EasyEDA): D30 = PE (S7); D31 = falha (S8)"));
-    Serial.println(F("        D29/D28 ramo B; D27 carga, D26 C/D; D25/D24 C; D23/D22 D"));
+    Saida.println(F(" estado ax    -> AX: Veiculo nao conectado (12 V)"));
+    Saida.println(F(" estado bx+   -> BX limite superior (10 V)"));
+    Saida.println(F(" estado bx    -> BX nominal (9 V)"));
+    Saida.println(F(" estado bx-   -> BX limite inferior (8 V)"));
+    Saida.println(F(" estado cx+   -> CX limite superior (7 V)"));
+    Saida.println(F(" estado cx    -> CX nominal (6 V)"));
+    Saida.println(F(" estado cx-   -> CX limite inferior (5 V)"));
+    Saida.println(F(" estado dx+   -> DX limite superior (4 V)"));
+    Saida.println(F(" estado dx    -> DX nominal (3 V)"));
+    Saida.println(F(" estado dx-   -> DX limite inferior (2 V)"));
+    Saida.println(F(" estado e     -> E: Falha / curto CP-PE (1 V)"));
+    Saida.println(F(" estado a|b|c|d -> Atalhos para o nominal"));
+    Saida.println(F(" estado status  -> Exibe relatorio do CP"));
+    Saida.println(F(" Reles (placa EasyEDA): D30 = PE (S7); D31 = falha (S8)"));
+    Saida.println(F("        D29/D28 ramo B; D27 carga, D26 C/D; D25/D24 C; D23/D22 D"));
 #else
-    Serial.println(F(" estado ...   -> Indisponivel no Nano (use o Mega)"));
+    Saida.println(F(" estado ...   -> Indisponivel no Nano (use o Mega)"));
 #endif
-    Serial.println(F("--------------------------------------------------"));
-    Serial.println(F(" debug stack -> Stack livre (high water mark) das tasks"));
-    Serial.println(F(" help        -> Exibe este menu explicativo"));
-    Serial.println(F("=================================================="));
+    Saida.println(F("--------------------------------------------------"));
+    Saida.println(F(" debug stack -> Stack livre (high water mark) das tasks"));
+    Saida.println(F(" help        -> Exibe este menu explicativo"));
+    Saida.println(F("=================================================="));
 }
 
 // "debug stack": menor stack livre já observada (no AVR 1 word = 1 byte).
@@ -101,14 +102,14 @@ void exibirHelp()
 // livre real fica abaixo de 255 porque a task sempre usa parte do stack.
 void imprimirStack()
 {
-    Serial.print(F("[STACK] SerialCLI livre: "));
-    Serial.print((unsigned int)uxTaskGetStackHighWaterMark(xTarefaSerial));
-    Serial.print(F(" de "));
-    Serial.print((unsigned int)STACK_CABO);
-    Serial.print(F(" | Blink livre: "));
-    Serial.print((unsigned int)uxTaskGetStackHighWaterMark(xTarefaBlink));
-    Serial.print(F(" de "));
-    Serial.println((unsigned int)STACK_BLINK);
+    Saida.print(F("[STACK] SerialCLI livre: "));
+    Saida.print((unsigned int)uxTaskGetStackHighWaterMark(xTarefaSerial));
+    Saida.print(F(" de "));
+    Saida.print((unsigned int)STACK_CABO);
+    Saida.print(F(" | Blink livre: "));
+    Saida.print((unsigned int)uxTaskGetStackHighWaterMark(xTarefaBlink));
+    Saida.print(F(" de "));
+    Saida.println((unsigned int)STACK_BLINK);
 }
 
 // true se "comando" começa pela palavra inteira "palavra" (fim ou espaço depois)
@@ -138,15 +139,15 @@ void processarComandoEstado(char *arg)
     CodigoEstadoCP estado;
     if (cpInterpretarEstado(arg, &estado) && veiculoCP.ativarEstado(estado))
     {
-        Serial.println(F("OK"));
+        Saida.println(F("OK"));
     }
     else
     {
-        Serial.println(F("ERRO: Estado"));
+        Saida.println(F("ERRO: Estado"));
     }
 #else
     (void)arg;
-    Serial.println(F("ERRO: CP indisponivel no Nano"));
+    Saida.println(F("ERRO: CP indisponivel no Nano"));
 #endif
 }
 
@@ -190,7 +191,7 @@ void processarComando(char *comando)
         // Se digitou apenas "cabo" sem argumento
         if (*arg == '\0')
         {
-            Serial.println(F("ERRO: Cabo"));
+            Saida.println(F("ERRO: Cabo"));
             return;
         }
 
@@ -206,12 +207,12 @@ void processarComando(char *comando)
         {
             int canal = arg[0] - '0';
             cabo.ativarCanal(canal);
-            Serial.println(F("OK"));
+            Saida.println(F("OK"));
             return;
         }
         else
         {
-            Serial.println(F("ERRO: Cabo"));
+            Saida.println(F("ERRO: Cabo"));
             return;
         }
     }
@@ -231,7 +232,7 @@ void processarComando(char *comando)
     }
 
     // 5. Qualquer outro comando desconhecido
-    Serial.println(F("ERRO"));
+    Saida.println(F("ERRO"));
 }
 
 // ============================================================================
@@ -281,7 +282,7 @@ void tarefaSerial(void *pvParameters)
                     if (linhaLonga)
                     {
                         // Nunca executa um comando truncado (ex.: prefixo válido)
-                        Serial.println(F("ERRO: Comando longo"));
+                        Saida.println(F("ERRO: Comando longo"));
                     }
                     else
                     {
@@ -328,18 +329,18 @@ void setup()
 
     xSerialMutex = xSemaphoreCreateMutex();
 
-    Serial.println();
-    Serial.println(F("=================================================="));
-    Serial.println(F("  PROJETO BANCADA - EMULADOR PP (IEC 62196) / CP  "));
-    Serial.println(F("=================================================="));
-    Serial.print(F(" Placa Detectada: "));
-    Serial.println(F(NOME_PLACA));
-    Serial.print(F(" Baud Rate:       "));
-    Serial.println(SERIAL_BAUD_RATE);
-    Serial.println(F(" Mutex Serial:    HABILITADO                      "));
-    Serial.println(F(" Buffer Estatico: HABILITADO (32 bytes)           "));
-    Serial.println(F(" Digite 'help' para ver os comandos disponiveis.  "));
-    Serial.println(F("=================================================="));
+    Saida.println();
+    Saida.println(F("=================================================="));
+    Saida.println(F("  PROJETO BANCADA - EMULADOR PP (IEC 62196) / CP  "));
+    Saida.println(F("=================================================="));
+    Saida.print(F(" Placa Detectada: "));
+    Saida.println(F(NOME_PLACA));
+    Saida.print(F(" Baud Rate:       "));
+    Saida.println(SERIAL_BAUD_RATE);
+    Saida.println(F(" Mutex Serial:    HABILITADO                      "));
+    Saida.println(F(" Buffer Estatico: HABILITADO (32 bytes)           "));
+    Saida.println(F(" Digite 'help' para ver os comandos disponiveis.  "));
+    Saida.println(F("=================================================="));
 
     if (xSerialMutex != NULL)
     {
@@ -363,7 +364,7 @@ void setup()
     }
     else
     {
-        Serial.println(F("FALHA CRITICA: Impossivel alocar Mutex Serial!"));
+        Saida.println(F("FALHA CRITICA: Impossivel alocar Mutex Serial!"));
     }
 }
 

@@ -9,6 +9,7 @@
  */
 
 #include "EmuladorVeiculoCP.h"
+#include "SaidaSerial.h"
 #include <Arduino_FreeRTOS.h>
 #include <task.h>
 
@@ -117,30 +118,30 @@ bool EmuladorVeiculoCP::ativarEstado(CodigoEstadoCP estado)
 
 void EmuladorVeiculoCP::imprimirStatus() const
 {
-    Serial.print(F("[STATUS CP] Estado: "));
+    Saida.print(F("[STATUS CP] Estado: "));
     switch (_estadoAtual)
     {
-        case CodigoEstadoCP::AX_NOMINAL:  Serial.print(F("AX | Vcp: 12 V | Veiculo nao conectado")); break;
-        case CodigoEstadoCP::BX_SUPERIOR: Serial.print(F("BX+ | Vcp: 10 V | Conectado, limite superior")); break;
-        case CodigoEstadoCP::BX_NOMINAL:  Serial.print(F("BX | Vcp: 9 V | Conectado, nominal")); break;
-        case CodigoEstadoCP::BX_INFERIOR: Serial.print(F("BX- | Vcp: 8 V | Conectado, limite inferior")); break;
-        case CodigoEstadoCP::CX_SUPERIOR: Serial.print(F("CX+ | Vcp: 7 V | Carga sem ventilacao, limite superior")); break;
-        case CodigoEstadoCP::CX_NOMINAL:  Serial.print(F("CX | Vcp: 6 V | Carga sem ventilacao, nominal")); break;
-        case CodigoEstadoCP::CX_INFERIOR: Serial.print(F("CX- | Vcp: 5 V | Carga sem ventilacao, limite inferior")); break;
-        case CodigoEstadoCP::DX_SUPERIOR: Serial.print(F("DX+ | Vcp: 4 V | Carga com ventilacao, limite superior")); break;
-        case CodigoEstadoCP::DX_NOMINAL:  Serial.print(F("DX | Vcp: 3 V | Carga com ventilacao, nominal")); break;
-        case CodigoEstadoCP::DX_INFERIOR: Serial.print(F("DX- | Vcp: 2 V | Carga com ventilacao, limite inferior")); break;
-        case CodigoEstadoCP::E_FALHA:     Serial.print(F("E | Vcp: 1 V | Falha / curto CP-PE")); break;
-        default:                          Serial.print(F("Desconhecido")); break;
+        case CodigoEstadoCP::AX_NOMINAL:  Saida.print(F("AX | Vcp: 12 V | Veiculo nao conectado")); break;
+        case CodigoEstadoCP::BX_SUPERIOR: Saida.print(F("BX+ | Vcp: 10 V | Conectado, limite superior")); break;
+        case CodigoEstadoCP::BX_NOMINAL:  Saida.print(F("BX | Vcp: 9 V | Conectado, nominal")); break;
+        case CodigoEstadoCP::BX_INFERIOR: Saida.print(F("BX- | Vcp: 8 V | Conectado, limite inferior")); break;
+        case CodigoEstadoCP::CX_SUPERIOR: Saida.print(F("CX+ | Vcp: 7 V | Carga sem ventilacao, limite superior")); break;
+        case CodigoEstadoCP::CX_NOMINAL:  Saida.print(F("CX | Vcp: 6 V | Carga sem ventilacao, nominal")); break;
+        case CodigoEstadoCP::CX_INFERIOR: Saida.print(F("CX- | Vcp: 5 V | Carga sem ventilacao, limite inferior")); break;
+        case CodigoEstadoCP::DX_SUPERIOR: Saida.print(F("DX+ | Vcp: 4 V | Carga com ventilacao, limite superior")); break;
+        case CodigoEstadoCP::DX_NOMINAL:  Saida.print(F("DX | Vcp: 3 V | Carga com ventilacao, nominal")); break;
+        case CodigoEstadoCP::DX_INFERIOR: Saida.print(F("DX- | Vcp: 2 V | Carga com ventilacao, limite inferior")); break;
+        case CodigoEstadoCP::E_FALHA:     Saida.print(F("E | Vcp: 1 V | Falha / curto CP-PE")); break;
+        default:                          Saida.print(F("Desconhecido")); break;
     }
 
     // Relés listados pelo PINO físico que os aciona (placa EasyEDA), ex.:
     // "Reles: D30 D29" no BX. O app só lê o campo "Estado".
-    Serial.print(F(" | Reles: "));
+    Saida.print(F(" | Reles: "));
     const uint16_t mascara = cpRelesDoEstado(_estadoAtual);
     if (mascara == CP_RELES_NENHUM)
     {
-        Serial.print(F("nenhum"));
+        Saida.print(F("nenhum"));
     }
     bool primeiro = true;
     for (uint8_t i = 0; i < CP_TOTAL_RELES; i++)
@@ -149,12 +150,12 @@ void EmuladorVeiculoCP::imprimirStatus() const
         {
             if (!primeiro)
             {
-                Serial.print(' ');
+                Saida.print(' ');
             }
-            Serial.print('D');
-            Serial.print(_pinos[i]);
+            Saida.print('D');
+            Saida.print(_pinos[i]);
             primeiro = false;
         }
     }
-    Serial.println();
+    Saida.println();
 }

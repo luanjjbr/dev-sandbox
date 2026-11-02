@@ -113,5 +113,5 @@ Os desvios em C, D e E vêm da rede da placa e do modelo de diodo do simulador, 
 
 Provas: `capturas/firmware_ponta_a_ponta_11_estados_e_PP.png` e `capturas/camada_c_VCP_11_estados_painel.png`.
 
-> [!CAUTION] Limitação conhecida do simulador
-> Respostas **longas** do firmware (`estado status`, `cabo status`, `help`) travam o MCU simulado após 1–2 bytes também no 1.1.0-SR2. Um firmware mínimo de teste (FreeRTOS + leitura da RX + escrita longa) reproduz o problema, e um sketch sem FreeRTOS não. Respostas curtas (`OK`, `ERRO…`) funcionam. Captura: `capturas/simulide11_estado_status_trava_FreeRTOS_TX.png`. Para recuperar, desligue e ligue a simulação.
+> [!NOTE] Respostas longas (resolvido em 2026-11-02)
+> No SimulIDE, com FreeRTOS, o MCU travava quando uma resposta passava dos 64 bytes do buffer de TX da `HardwareSerial` (`estado status`, `cabo status`, `help`): o laço "buffer cheio" esperava uma interrupção UDRE que o simulador não voltava a gerar. O firmware agora escreve pela `lib/SaidaSerial` (polling do UDRE, com `taskYIELD`), e todas as respostas saem completas. Provas: `capturas/diag_*.png` (diagnóstico) e `capturas/correcao_saidaserial_respostas_longas_OK.png`.

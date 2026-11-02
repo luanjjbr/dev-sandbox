@@ -8,6 +8,7 @@
  */
 
 #include "EmuladorCabo.h"
+#include "SaidaSerial.h"
 
 EmuladorCabo::EmuladorCabo(uint8_t pinoS1, uint8_t pinoS2, uint8_t pinoS3,
                            uint8_t pinoS4, uint8_t pinoS5, uint8_t pinoS6)
@@ -130,12 +131,12 @@ const char* EmuladorCabo::getDescricao() const
 
 void EmuladorCabo::imprimirStatus() const
 {
-    Serial.print(F("[STATUS CABO] Canal: "));
-    Serial.print(getCanalAtivo());
-    Serial.print(F(" | R: "));
-    Serial.print(getResistencia());
-    Serial.print(F(" Ohms | Imax: "));
-    Serial.print(getCorrenteMaxima());
-    Serial.print(F(" A | Descricao: "));
-    Serial.println(getDescricao());
+    Saida.print(F("[STATUS CABO] Canal: "));
+    Saida.print(getCanalAtivo());
+    Saida.print(F(" | R: "));
+    Saida.print(getResistencia());
+    Saida.print(F(" Ohms | Imax: "));
+    Saida.print(getCorrenteMaxima());
+    Saida.print(F(" A | Descricao: "));
+    Saida.println(getDescricao());
 }
