@@ -58,8 +58,6 @@
 
 <item itemtype="Tunnel" CircId="T-L13" mainComp="false" Show_id="false" Show_Val="false" Pos="-404,128" rotation="0" hflip="1" vflip="1" label="T-L13" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D13" IsBus="false" />
 
-<item itemtype="Node" CircId="N-PP0" mainComp="false" Pos="-1060,320" />
-
 <item itemtype="Resistor" CircId="R-PP0" mainComp="false" Show_id="true" Show_Val="false" Pos="-1060,360" rotation="90" hflip="1" vflip="1" label="R13 4k7" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="4.7 kΩ" />
 
 <item itemtype="Mosfet" CircId="Q-PP0" mainComp="false" Show_id="true" Show_Val="false" Pos="-1068,408" rotation="0" hflip="1" vflip="1" label="Q 2N7002 (D4)" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" P_Channel="false" Depletion="false" RDSon="2 Ω" Threshold="2 V" />
@@ -68,15 +66,11 @@
 
 <item itemtype="Resistor" CircId="RG-PP0" mainComp="false" Show_id="true" Show_Val="false" Pos="-1108,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
-<item itemtype="Node" CircId="N-G0" mainComp="false" Pos="-1088,408" />
-
 <item itemtype="Resistor" CircId="RPD-PP0" mainComp="false" Show_id="true" Show_Val="false" Pos="-1088,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
 <item itemtype="Ground" CircId="G-PPg0" mainComp="false" Show_id="true" Show_Val="false" Pos="-1088,496" rotation="0" hflip="1" vflip="1" label="G-PPg0" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Tunnel" CircId="T-PP4" mainComp="false" Show_id="false" Show_Val="false" Pos="-1132,408" rotation="0" hflip="1" vflip="1" label="T-PP4" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D4" IsBus="false" />
-
-<item itemtype="Node" CircId="N-PP1" mainComp="false" Pos="-932,320" />
 
 <item itemtype="Resistor" CircId="R-PP1" mainComp="false" Show_id="true" Show_Val="false" Pos="-932,360" rotation="90" hflip="1" vflip="1" label="R14 1500" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1.5 kΩ" />
 
@@ -86,15 +80,11 @@
 
 <item itemtype="Resistor" CircId="RG-PP1" mainComp="false" Show_id="true" Show_Val="false" Pos="-980,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
-<item itemtype="Node" CircId="N-G1" mainComp="false" Pos="-960,408" />
-
 <item itemtype="Resistor" CircId="RPD-PP1" mainComp="false" Show_id="true" Show_Val="false" Pos="-960,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
 <item itemtype="Ground" CircId="G-PPg1" mainComp="false" Show_id="true" Show_Val="false" Pos="-960,496" rotation="0" hflip="1" vflip="1" label="G-PPg1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Tunnel" CircId="T-PP5" mainComp="false" Show_id="false" Show_Val="false" Pos="-1004,408" rotation="0" hflip="1" vflip="1" label="T-PP5" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D5" IsBus="false" />
-
-<item itemtype="Node" CircId="N-PP2" mainComp="false" Pos="-804,320" />
 
 <item itemtype="Resistor" CircId="R-PP2" mainComp="false" Show_id="true" Show_Val="false" Pos="-804,360" rotation="90" hflip="1" vflip="1" label="R17 680" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="680 Ω" />
 
@@ -104,15 +94,11 @@
 
 <item itemtype="Resistor" CircId="RG-PP2" mainComp="false" Show_id="true" Show_Val="false" Pos="-852,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
-<item itemtype="Node" CircId="N-G2" mainComp="false" Pos="-832,408" />
-
 <item itemtype="Resistor" CircId="RPD-PP2" mainComp="false" Show_id="true" Show_Val="false" Pos="-832,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
 <item itemtype="Ground" CircId="G-PPg2" mainComp="false" Show_id="true" Show_Val="false" Pos="-832,496" rotation="0" hflip="1" vflip="1" label="G-PPg2" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Tunnel" CircId="T-PP6" mainComp="false" Show_id="false" Show_Val="false" Pos="-876,408" rotation="0" hflip="1" vflip="1" label="T-PP6" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D6" IsBus="false" />
-
-<item itemtype="Node" CircId="N-PP3" mainComp="false" Pos="-676,320" />
 
 <item itemtype="Resistor" CircId="R-PP3" mainComp="false" Show_id="true" Show_Val="false" Pos="-676,360" rotation="90" hflip="1" vflip="1" label="R22 220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
@@ -122,15 +108,11 @@
 
 <item itemtype="Resistor" CircId="RG-PP3" mainComp="false" Show_id="true" Show_Val="false" Pos="-724,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
-<item itemtype="Node" CircId="N-G3" mainComp="false" Pos="-704,408" />
-
 <item itemtype="Resistor" CircId="RPD-PP3" mainComp="false" Show_id="true" Show_Val="false" Pos="-704,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
 <item itemtype="Ground" CircId="G-PPg3" mainComp="false" Show_id="true" Show_Val="false" Pos="-704,496" rotation="0" hflip="1" vflip="1" label="G-PPg3" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Tunnel" CircId="T-PP7" mainComp="false" Show_id="false" Show_Val="false" Pos="-748,408" rotation="0" hflip="1" vflip="1" label="T-PP7" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D7" IsBus="false" />
-
-<item itemtype="Node" CircId="N-PP4" mainComp="false" Pos="-548,320" />
 
 <item itemtype="Resistor" CircId="R-PP4" mainComp="false" Show_id="true" Show_Val="false" Pos="-548,360" rotation="90" hflip="1" vflip="1" label="R25 100" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="100 Ω" />
 
@@ -140,15 +122,11 @@
 
 <item itemtype="Resistor" CircId="RG-PP4" mainComp="false" Show_id="true" Show_Val="false" Pos="-596,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
 
-<item itemtype="Node" CircId="N-G4" mainComp="false" Pos="-576,408" />
-
 <item itemtype="Resistor" CircId="RPD-PP4" mainComp="false" Show_id="true" Show_Val="false" Pos="-576,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
 <item itemtype="Ground" CircId="G-PPg4" mainComp="false" Show_id="true" Show_Val="false" Pos="-576,496" rotation="0" hflip="1" vflip="1" label="G-PPg4" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Tunnel" CircId="T-PP8" mainComp="false" Show_id="false" Show_Val="false" Pos="-620,408" rotation="0" hflip="1" vflip="1" label="T-PP8" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D8" IsBus="false" />
-
-<item itemtype="Node" CircId="N-PP5" mainComp="false" Pos="-420,320" />
 
 <item itemtype="Resistor" CircId="R-PP5" mainComp="false" Show_id="true" Show_Val="false" Pos="-420,360" rotation="90" hflip="1" vflip="1" label="R26 47" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="47 Ω" />
 
@@ -157,8 +135,6 @@
 <item itemtype="Ground" CircId="G-PPs5" mainComp="false" Show_id="true" Show_Val="false" Pos="-420,456" rotation="0" hflip="1" vflip="1" label="G-PPs5" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
 <item itemtype="Resistor" CircId="RG-PP5" mainComp="false" Show_id="true" Show_Val="false" Pos="-468,408" rotation="0" hflip="1" vflip="1" label="220" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="220 Ω" />
-
-<item itemtype="Node" CircId="N-G5" mainComp="false" Pos="-448,408" />
 
 <item itemtype="Resistor" CircId="RPD-PP5" mainComp="false" Show_id="true" Show_Val="false" Pos="-448,448" rotation="90" hflip="1" vflip="1" label="10k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 kΩ" />
 
@@ -170,8 +146,6 @@
 
 <item itemtype="Fixed Voltage" CircId="V-EST-PP" mainComp="false" Show_id="true" Show_Val="false" Pos="-324,320" rotation="180" hflip="1" vflip="1" label="Estacao 3,3 V" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Voltage="3.3 V" Out="true" />
 
-<item itemtype="Node" CircId="N-PPosc" mainComp="false" Pos="-404,320" />
-
 <item itemtype="Tunnel" CircId="T-PP-osc" mainComp="false" Show_id="false" Show_Val="false" Pos="-404,280" rotation="90" hflip="1" vflip="1" label="T-PP-osc" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="PP" IsBus="false" />
 
 <item itemtype="Voltimeter" CircId="V-PP" mainComp="false" Show_id="true" Show_Val="false" Pos="-1124,272" rotation="0" hflip="1" vflip="1" label="V_PP" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
@@ -182,13 +156,9 @@
 
 <item itemtype="Resistor" CircId="R-EST-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="448,-440" rotation="0" hflip="1" vflip="1" label="R1 estacao 1k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1 kΩ" />
 
-<item itemtype="Node" CircId="N-CP1" mainComp="false" Pos="496,-440" />
-
 <item itemtype="Diode" CircId="D11" mainComp="false" Show_id="true" Show_Val="false" Pos="544,-440" rotation="0" hflip="1" vflip="1" label="D11 1N4148" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Model="Diode Default" Threshold="0.528862 V" MaxCurrent="1 A" Resistance="0.6 Ω" BrkDownV="0 V" SatCurrent="1328.05 nA" EmCoef="2" />
 
 <item itemtype="Tunnel" CircId="T-CPV0" mainComp="false" Show_id="false" Show_Val="false" Pos="600,-440" rotation="180" hflip="1" vflip="1" label="T-CPV0" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="CPV" IsBus="false" />
-
-<item itemtype="Node" CircId="N-CP2" mainComp="false" Pos="496,-328" />
 
 <item itemtype="Voltimeter" CircId="V-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="560,-344" rotation="0" hflip="1" vflip="1" label="V_CP" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
@@ -198,25 +168,21 @@
 
 <item itemtype="Tunnel" CircId="T-760-topo" mainComp="false" Show_id="false" Show_Val="false" Pos="784,-440" rotation="180" hflip="1" vflip="1" label="T-760-topo" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="CPV" IsBus="false" />
 
-<item itemtype="Resistor" CircId="R30" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-408" rotation="90" hflip="1" vflip="1" label="R30 1870" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1.87 kΩ" />
-
-<item itemtype="Node" CircId="N-760-0" mainComp="false" Pos="760,-380" />
+<item itemtype="Resistor" CircId="R30" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-408" rotation="90" hflip="1" vflip="1" label="R30 1870" idLabPos="-19.0972,5.12411" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1.87 kΩ" />
 
 <item itemtype="Tunnel" CircId="T-N-760-0" mainComp="false" Show_id="false" Show_Val="false" Pos="728,-380" rotation="0" hflip="1" vflip="1" label="T-N-760-0" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="B_NOM" IsBus="false" />
 
-<item itemtype="Resistor" CircId="R31" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-360" rotation="90" hflip="1" vflip="1" label="R31 910" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="910 Ω" />
+<item itemtype="Resistor" CircId="R31" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-340" rotation="90" hflip="1" vflip="1" label="R31 910" idLabPos="-14.8187,5.12411" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="910 Ω" />
 
-<item itemtype="Resistor" CircId="R32" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-320" rotation="90" hflip="1" vflip="1" label="R32 10" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 Ω" />
+<item itemtype="Resistor" CircId="R32" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-296" rotation="90" hflip="1" vflip="1" label="R32 10" idLabPos="-11.3959,5.69458" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="10 Ω" />
 
-<item itemtype="Node" CircId="N-760-1" mainComp="false" Pos="760,-292" />
+<item itemtype="Tunnel" CircId="T-N-760-1" mainComp="false" Show_id="false" Show_Val="false" Pos="720,-264" rotation="0" hflip="1" vflip="1" label="T-N-760-1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="B_INF" IsBus="false" />
 
-<item itemtype="Tunnel" CircId="T-N-760-1" mainComp="false" Show_id="false" Show_Val="false" Pos="728,-292" rotation="0" hflip="1" vflip="1" label="T-N-760-1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="B_INF" IsBus="false" />
+<item itemtype="Resistor" CircId="R33" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-228" rotation="90" hflip="1" vflip="1" label="R33 1k8" idLabPos="-14.6932,10.8745" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1.8 kΩ" />
 
-<item itemtype="Resistor" CircId="R33" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-272" rotation="90" hflip="1" vflip="1" label="R33 1k8" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1.8 kΩ" />
+<item itemtype="Resistor" CircId="R34" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-160" rotation="90" hflip="1" vflip="1" label="R34 20" idLabPos="-12.9476,5.63755" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="20 Ω" />
 
-<item itemtype="Resistor" CircId="R34" mainComp="false" Show_id="true" Show_Val="false" Pos="760,-232" rotation="90" hflip="1" vflip="1" label="R34 20" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="20 Ω" />
-
-<item itemtype="Tunnel" CircId="T-760-base" mainComp="false" Show_id="false" Show_Val="false" Pos="784,-200" rotation="180" hflip="1" vflip="1" label="T-760-base" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="RET" IsBus="false" />
+<item itemtype="Tunnel" CircId="T-760-base" mainComp="false" Show_id="false" Show_Val="false" Pos="788,-92" rotation="180" hflip="1" vflip="1" label="T-760-base" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="RET" IsBus="false" />
 
 <item itemtype="Tunnel" CircId="T-960-topo" mainComp="false" Show_id="false" Show_Val="false" Pos="984,-440" rotation="180" hflip="1" vflip="1" label="T-960-topo" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="CT" IsBus="false" />
 
@@ -226,15 +192,11 @@
 
 <item itemtype="Resistor" CircId="R39" mainComp="false" Show_id="true" Show_Val="false" Pos="960,-328" rotation="90" hflip="1" vflip="1" label="R39 390" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="390 Ω" />
 
-<item itemtype="Node" CircId="N-960-0" mainComp="false" Pos="960,-300" />
-
 <item itemtype="Tunnel" CircId="T-N-960-0" mainComp="false" Show_id="false" Show_Val="false" Pos="928,-300" rotation="0" hflip="1" vflip="1" label="T-N-960-0" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="C_NOM" IsBus="false" />
 
 <item itemtype="Resistor" CircId="R38" mainComp="false" Show_id="true" Show_Val="false" Pos="960,-280" rotation="90" hflip="1" vflip="1" label="R38 390" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="390 Ω" />
 
 <item itemtype="Resistor" CircId="R37" mainComp="false" Show_id="true" Show_Val="false" Pos="960,-240" rotation="90" hflip="1" vflip="1" label="R37 2" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="2 Ω" />
-
-<item itemtype="Node" CircId="N-960-1" mainComp="false" Pos="960,-212" />
 
 <item itemtype="Tunnel" CircId="T-N-960-1" mainComp="false" Show_id="false" Show_Val="false" Pos="928,-212" rotation="0" hflip="1" vflip="1" label="T-N-960-1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="C_INF" IsBus="false" />
 
@@ -244,9 +206,9 @@
 
 <item itemtype="Resistor" CircId="R42" mainComp="false" Show_id="true" Show_Val="false" Pos="960,-112" rotation="90" hflip="1" vflip="1" label="R42 13" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="13 Ω" />
 
-<item itemtype="Resistor" CircId="R43" mainComp="false" Show_id="true" Show_Val="false" Pos="960,-72" rotation="90" hflip="1" vflip="1" label="R43 1" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1 Ω" />
+<item itemtype="Resistor" CircId="R43" mainComp="false" Show_id="true" Show_Val="false" Pos="960,44" rotation="90" hflip="1" vflip="1" label="R43 1" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1 Ω" />
 
-<item itemtype="Tunnel" CircId="T-960-base" mainComp="false" Show_id="false" Show_Val="false" Pos="984,-40" rotation="180" hflip="1" vflip="1" label="T-960-base" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="RET" IsBus="false" />
+<item itemtype="Tunnel" CircId="T-960-base" mainComp="false" Show_id="false" Show_Val="false" Pos="980,88" rotation="180" hflip="1" vflip="1" label="T-960-base" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="RET" IsBus="false" />
 
 <item itemtype="Tunnel" CircId="T-1160-topo" mainComp="false" Show_id="false" Show_Val="false" Pos="1184,-440" rotation="180" hflip="1" vflip="1" label="T-1160-topo" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="DT" IsBus="false" />
 
@@ -260,13 +222,9 @@
 
 <item itemtype="Resistor" CircId="R46" mainComp="false" Show_id="true" Show_Val="false" Pos="1160,-248" rotation="90" hflip="1" vflip="1" label="R46 2" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="2 Ω" />
 
-<item itemtype="Node" CircId="N-1160-0" mainComp="false" Pos="1160,-220" />
-
 <item itemtype="Tunnel" CircId="T-N-1160-0" mainComp="false" Show_id="false" Show_Val="false" Pos="1128,-220" rotation="0" hflip="1" vflip="1" label="T-N-1160-0" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D_NOM" IsBus="false" />
 
 <item itemtype="Resistor" CircId="R51" mainComp="false" Show_id="true" Show_Val="false" Pos="1160,-200" rotation="90" hflip="1" vflip="1" label="R51 130" idLabPos="8,-6" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="130 Ω" />
-
-<item itemtype="Node" CircId="N-1160-1" mainComp="false" Pos="1160,-172" />
 
 <item itemtype="Tunnel" CircId="T-N-1160-1" mainComp="false" Show_id="false" Show_Val="false" Pos="1128,-172" rotation="0" hflip="1" vflip="1" label="T-N-1160-1" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D_INF" IsBus="false" />
 
@@ -282,7 +240,7 @@
 
 <item itemtype="Tunnel" CircId="T-1360-base" mainComp="false" Show_id="false" Show_Val="false" Pos="1384,-376" rotation="180" hflip="1" vflip="1" label="T-1360-base" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="RET" IsBus="false" />
 
-<item itemtype="Oscope" CircId="Oscope-1" mainComp="false" Show_id="true" Show_Val="false" Pos="400,-150" rotation="0" hflip="1" vflip="1" label="Osciloscopio CH1=PP CH2=CP" idLabPos="-90,-100" labelrot="0" valLabPos="-16,20" valLabRot="0" Basic_X="135 _px" Basic_Y="135 _px" BufferSize="600000" connectGnd="true" InputImped="10 MΩ" TimDiv="500000000" TimPos="0,0,0,0," VolDiv="1,5,1,1," Tunnels=",,,," Trigger="1" Filter="0.1 V" AutoSC="4" Tracks="2" HideCh="false,false,false,false," VolPos="0,0,0,0," />
+<item itemtype="Oscope" CircId="Oscope-1" mainComp="false" Show_id="true" Show_Val="false" Pos="400,-150" rotation="0" hflip="1" vflip="1" label="Osciloscopio CH1&#x3DPP CH2&#x3DCP" idLabPos="-90,-100" labelrot="0" valLabPos="-16,20" valLabRot="0" Basic_X="135 _px" Basic_Y="135 _px" BufferSize="600000" connectGnd="true" InputImped="10 MΩ" TimDiv="22096167300" TimPos="63344312236,63344312236,63344312236,63344312236," VolDiv="1.05048,1.05048,1.05048,1.05048," Tunnels=",,,," Trigger="1" Filter="0.1 V" AutoSC="4" Tracks="2" HideCh="false,false,false,false," VolPos="-0.388679,-0.388679,-0.388679,-0.388679," />
 
 <item itemtype="Tunnel" CircId="T-OSC-PP" mainComp="false" Show_id="false" Show_Val="false" Pos="280,-198" rotation="0" hflip="1" vflip="1" label="T-OSC-PP" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="PP" IsBus="false" />
 
@@ -395,6 +353,48 @@
 <item itemtype="Tunnel" CircId="T-RLY10-no" mainComp="false" Show_id="false" Show_Val="false" Pos="1336,312" rotation="180" hflip="1" vflip="1" label="T-RLY10-no" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D_INF" IsBus="false" />
 
 <item itemtype="Tunnel" CircId="T-RLY10-nc" mainComp="false" Show_id="false" Show_Val="false" Pos="1336,288" rotation="180" hflip="1" vflip="1" label="T-RLY10-nc" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Name="D_NOM" IsBus="false" />
+
+<item itemtype="Node" CircId="N-PP0" mainComp="false" Pos="-1060,320" />
+
+<item itemtype="Node" CircId="N-G0" mainComp="false" Pos="-1088,408" />
+
+<item itemtype="Node" CircId="N-PP1" mainComp="false" Pos="-932,320" />
+
+<item itemtype="Node" CircId="N-G1" mainComp="false" Pos="-960,408" />
+
+<item itemtype="Node" CircId="N-PP2" mainComp="false" Pos="-804,320" />
+
+<item itemtype="Node" CircId="N-G2" mainComp="false" Pos="-832,408" />
+
+<item itemtype="Node" CircId="N-PP3" mainComp="false" Pos="-676,320" />
+
+<item itemtype="Node" CircId="N-G3" mainComp="false" Pos="-704,408" />
+
+<item itemtype="Node" CircId="N-PP4" mainComp="false" Pos="-548,320" />
+
+<item itemtype="Node" CircId="N-G4" mainComp="false" Pos="-576,408" />
+
+<item itemtype="Node" CircId="N-PP5" mainComp="false" Pos="-420,320" />
+
+<item itemtype="Node" CircId="N-G5" mainComp="false" Pos="-448,408" />
+
+<item itemtype="Node" CircId="N-PPosc" mainComp="false" Pos="-404,320" />
+
+<item itemtype="Node" CircId="N-CP1" mainComp="false" Pos="496,-440" />
+
+<item itemtype="Node" CircId="N-CP2" mainComp="false" Pos="496,-328" />
+
+<item itemtype="Node" CircId="N-760-0" mainComp="false" Pos="760,-380" />
+
+<item itemtype="Node" CircId="N-760-1" mainComp="false" Pos="760,-264" />
+
+<item itemtype="Node" CircId="N-960-0" mainComp="false" Pos="960,-300" />
+
+<item itemtype="Node" CircId="N-960-1" mainComp="false" Pos="960,-212" />
+
+<item itemtype="Node" CircId="N-1160-0" mainComp="false" Pos="1160,-220" />
+
+<item itemtype="Node" CircId="N-1160-1" mainComp="false" Pos="1160,-172" />
 
 <item itemtype="Connector" uid="Connector-1" startpinid="Mega-1-0" endpinid="SerialPort-1-pin0" pointList="8,120,-16,120,-16,-152,-256,-152,-256,-208,-240,-208" />
 
@@ -590,19 +590,19 @@
 
 <item itemtype="Connector" uid="Connector-97" startpinid="N-760-0-1" endpinid="T-N-760-0-pin" pointList="760,-380,728,-380" />
 
-<item itemtype="Connector" uid="Connector-98" startpinid="N-760-0-2" endpinid="R31-lPin" pointList="760,-380,760,-376" />
+<item itemtype="Connector" uid="Connector-98" startpinid="N-760-0-2" endpinid="R31-lPin" pointList="760,-380,760,-356" />
 
-<item itemtype="Connector" uid="Connector-99" startpinid="R31-rPin" endpinid="R32-lPin" pointList="760,-344,760,-336" />
+<item itemtype="Connector" uid="Connector-99" startpinid="R31-rPin" endpinid="R32-lPin" pointList="760,-324,760,-312" />
 
-<item itemtype="Connector" uid="Connector-100" startpinid="R32-rPin" endpinid="N-760-1-0" pointList="760,-304,760,-292" />
+<item itemtype="Connector" uid="Connector-100" startpinid="R32-rPin" endpinid="N-760-1-0" pointList="760,-280,760,-264" />
 
-<item itemtype="Connector" uid="Connector-101" startpinid="N-760-1-1" endpinid="T-N-760-1-pin" pointList="760,-292,728,-292" />
+<item itemtype="Connector" uid="Connector-101" startpinid="N-760-1-1" endpinid="T-N-760-1-pin" pointList="760,-264,720,-264" />
 
-<item itemtype="Connector" uid="Connector-102" startpinid="N-760-1-2" endpinid="R33-lPin" pointList="760,-292,760,-288" />
+<item itemtype="Connector" uid="Connector-102" startpinid="N-760-1-2" endpinid="R33-lPin" pointList="760,-264,760,-244" />
 
-<item itemtype="Connector" uid="Connector-103" startpinid="R33-rPin" endpinid="R34-lPin" pointList="760,-256,760,-248" />
+<item itemtype="Connector" uid="Connector-103" startpinid="R33-rPin" endpinid="R34-lPin" pointList="760,-212,760,-176" />
 
-<item itemtype="Connector" uid="Connector-104" startpinid="R34-rPin" endpinid="T-760-base-pin" pointList="760,-216,760,-200,784,-200" />
+<item itemtype="Connector" uid="Connector-104" startpinid="R34-rPin" endpinid="T-760-base-pin" pointList="760,-144,760,-92,788,-92" />
 
 <item itemtype="Connector" uid="Connector-105" startpinid="T-960-topo-pin" endpinid="R41-lPin" pointList="984,-440,960,-440,960,-424" />
 
@@ -628,9 +628,9 @@
 
 <item itemtype="Connector" uid="Connector-116" startpinid="R36-rPin" endpinid="R42-lPin" pointList="960,-136,960,-128" />
 
-<item itemtype="Connector" uid="Connector-117" startpinid="R42-rPin" endpinid="R43-lPin" pointList="960,-96,960,-88" />
+<item itemtype="Connector" uid="Connector-117" startpinid="R42-rPin" endpinid="R43-lPin" pointList="960,-96,960,28" />
 
-<item itemtype="Connector" uid="Connector-118" startpinid="R43-rPin" endpinid="T-960-base-pin" pointList="960,-56,960,-40,984,-40" />
+<item itemtype="Connector" uid="Connector-118" startpinid="R43-rPin" endpinid="T-960-base-pin" pointList="960,60,960,88,980,88" />
 
 <item itemtype="Connector" uid="Connector-119" startpinid="T-1160-topo-pin" endpinid="R48-lPin" pointList="1184,-440,1160,-440,1160,-424" />
 
@@ -662,9 +662,9 @@
 
 <item itemtype="Connector" uid="Connector-133" startpinid="R29-rPin" endpinid="T-1360-base-pin" pointList="1360,-392,1360,-376,1384,-376" />
 
-<item itemtype="Connector" uid="Connector-134" startpinid="Oscope-1-Pin0" endpinid="T-OSC-PP-pin" pointList="312,-198,280,-198" />
+<item itemtype="Connector" uid="Connector-134" startpinid="Oscope-1-Pin0" endpinid="T-OSC-PP-pin" pointList="312,-198,280,-198,280,-196" />
 
-<item itemtype="Connector" uid="Connector-135" startpinid="Oscope-1-Pin1" endpinid="T-OSC-CP-pin" pointList="312,-166,280,-166" />
+<item itemtype="Connector" uid="Connector-135" startpinid="Oscope-1-Pin1" endpinid="T-OSC-CP-pin" pointList="312,-166,280,-166,280,-164" />
 
 <item itemtype="Connector" uid="Connector-136" startpinid="T-RLY6-bob-pin" endpinid="RLY6-inductor-lPin" pointList="440,200,464,200" />
 

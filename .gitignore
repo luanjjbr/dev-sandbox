@@ -465,3 +465,7 @@ publish/
 
 # Executável único antigo (substituído pelo anexo do GitHub Release; gerado em dist/standalone/)
 app/
+
+# Capturas de diagnóstico (podem conter a tela do usuário); só os recortes do esquemático são versionados
+simulacao/Bancada/capturas/*
+!simulacao/Bancada/capturas/esquematico_*.png
