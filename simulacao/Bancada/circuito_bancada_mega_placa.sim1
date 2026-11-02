@@ -152,7 +152,7 @@
 
 <item itemtype="Ground" CircId="G-VPP" mainComp="false" Show_id="true" Show_Val="false" Pos="-1116,328" rotation="0" hflip="1" vflip="1" label="G-VPP" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" />
 
-<item itemtype="WaveGen" CircId="V-EST-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="400,-440" rotation="0" hflip="1" vflip="1" label="Estacao PWM +-12 V 1 kHz" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Out="true" Running="true" Wave_Type="Square" Freq="1 kHz" Phase="0 _º" Steps="100 _Steps" Duty="50 _%" Always_On="false" Bipolar="true" Floating="false" Semi_Ampli="12 V" Mid_Volt="0 V" />
+<item itemtype="WaveGen" CircId="V-EST-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="344,-440" rotation="0" hflip="1" vflip="1" label="Estacao PWM +-12 V 1 kHz" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Out="true" Running="true" Wave_Type="Square" Freq="1 kHz" Phase="0 _º" Steps="100 _Steps" Duty="50 _%" Always_On="false" Bipolar="true" Floating="false" Semi_Ampli="12 V" Mid_Volt="0 V" />
 
 <item itemtype="Resistor" CircId="R-EST-CP" mainComp="false" Show_id="true" Show_Val="false" Pos="448,-440" rotation="0" hflip="1" vflip="1" label="R1 estacao 1k" idLabPos="-16,-24" labelrot="0" valLabPos="-16,20" valLabRot="0" Resistance="1 kΩ" />
 
@@ -568,7 +568,7 @@
 
 <item itemtype="Connector" uid="Connector-86" startpinid="V-PP-rPin" endpinid="G-VPP-Gnd" pointList="-1116,288,-1116,312" />
 
-<item itemtype="Connector" uid="Connector-87" startpinid="V-EST-CP-outnod" endpinid="R-EST-CP-lPin" pointList="416,-440,432,-440" />
+<item itemtype="Connector" uid="Connector-87" startpinid="V-EST-CP-outnod" endpinid="R-EST-CP-lPin" pointList="360,-440,432,-440" />
 
 <item itemtype="Connector" uid="Connector-88" startpinid="R-EST-CP-rPin" endpinid="N-CP1-0" pointList="464,-440,496,-440" />
 
