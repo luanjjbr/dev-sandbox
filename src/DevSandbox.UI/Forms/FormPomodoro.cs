@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Media;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DevSandbox.Core.Pomodoro;
 using DevSandbox.UI.Common;
@@ -229,24 +230,81 @@ namespace DevSandbox.UI.Forms
                 return;
             }
 
+            // O nome do ciclo vem do argumento (no fim, EstadoAtual já é Parado). Se um novo ciclo
+            // foi iniciado entre o fim no motor e a execução deste BeginInvoke, o aviso está obsoleto.
+            if (_engine.EstaRodando) return;
+
+            // 1) Atualiza mostrador, seletores e botões ANTES de qualquer aviso
             HabilitarSeletores(true);
             AtualizarBotoesAcao();
-            lblTempo.Text = "00:00";
-            lblStatusCiclo.Text = "🎉 Ciclo concluído!";
+            lblTempo.Text = $"{numCiclos.Value:00}:00";
+            lblStatusCiclo.Text = $"🎉 Ciclo concluído: {NomeDoCiclo(estadoFinalizado)}!";
+            this.Update();
 
+            // 2) Aviso não bloqueante: som + piscar a janela na barra de tarefas (se não estiver em primeiro plano)
             try
             {
-                SystemSounds.Beep.Play();
+                SystemSounds.Asterisk.Play();
             }
             catch { }
 
-            MessageBox.Show($"Tempo finalizado para o ciclo: {estadoFinalizado}!", "Pomodoro", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            lblTempo.Text = $"{numCiclos.Value:00}:00";
+            if (Form.ActiveForm != this)
+            {
+                PiscarJanela();
+            }
+        }
+
+        private static string NomeDoCiclo(EstadoPomodoro estado) => estado switch
+        {
+            EstadoPomodoro.Foco => "Foco",
+            EstadoPomodoro.DescansoCurto => "Descanso curto",
+            EstadoPomodoro.DescansoLongo => "Descanso longo",
+            _ => estado.ToString()
+        };
+
+        // --- Aviso não bloqueante via FlashWindowEx (pisca até a janela voltar ao primeiro plano) ---
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FLASHWINFO
+        {
+            public uint cbSize;
+            public IntPtr hwnd;
+            public uint dwFlags;
+            public uint uCount;
+            public uint dwTimeout;
+        }
+
+        private const uint FLASHW_ALL = 0x00000003;
+        private const uint FLASHW_TIMERNOFG = 0x0000000C;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+
+        private void PiscarJanela()
+        {
+            try
+            {
+                var info = new FLASHWINFO
+                {
+                    cbSize = (uint)Marshal.SizeOf<FLASHWINFO>(),
+                    hwnd = this.Handle,
+                    dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
+                    uCount = uint.MaxValue,
+                    dwTimeout = 0
+                };
+                FlashWindowEx(ref info);
+            }
+            catch
+            {
+                // Recurso cosmético: ignora falhas da API nativa
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            _engine.Parar();
+            _engine.OnTick -= Engine_OnTick;
+            _engine.OnEstadoMudou -= Engine_OnEstadoMudou;
+            _engine.Dispose();
             base.OnFormClosing(e);
         }
     }

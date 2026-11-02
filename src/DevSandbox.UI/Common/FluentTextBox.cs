@@ -38,7 +38,8 @@ namespace DevSandbox.UI.Common
                 BorderStyle = BorderStyle.None,
                 BackColor = ThemeManager.FundoInput,
                 ForeColor = ThemeManager.TextoPrincipal,
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                Font = ThemeManager.FonteEntrada,
+                TabStop = true,
                 Dock = DockStyle.Fill
             };
 
@@ -62,6 +63,7 @@ namespace DevSandbox.UI.Common
             };
 
             this.Controls.Add(_innerBox);
+            this.TabStop = true; // O Tab entra no container e o foco é repassado à caixa interna
             this.Cursor = Cursors.IBeam;
             this.Click += (s, e) => _innerBox.Focus();
         }
@@ -115,6 +117,16 @@ namespace DevSandbox.UI.Common
             {
                 _innerBox.Font = value;
                 Invalidate();
+            }
+        }
+
+        // Tab/Shift+Tab ou clique no container: o foco vai sempre para a caixa interna
+        protected override void OnEnter(EventArgs e)
+        {
+            base.OnEnter(e);
+            if (!_innerBox.Focused && _innerBox.CanFocus)
+            {
+                _innerBox.Focus();
             }
         }
 

@@ -7,6 +7,11 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- DPI explícito (lido por ApplicationConfiguration.Initialize no Program.cs).
+         SystemAware = comportamento atual; os formulários usam AutoScaleMode.Font. -->
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <ApplicationDefaultFont>Segoe UI, 9pt</ApplicationDefaultFont>
   </PropertyGroup>
 
   <ItemGroup>

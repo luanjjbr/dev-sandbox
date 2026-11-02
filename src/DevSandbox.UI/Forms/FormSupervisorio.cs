@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 using DevSandbox.Core.Serial;
 using DevSandbox.UI.Common;
@@ -9,6 +10,13 @@ namespace DevSandbox.UI.Forms
     public partial class FormSupervisorio : Form
     {
         private readonly SupervisorioSerialEngine _engine = new();
+
+        // Recepção em lotes: a thread da serial só acumula; o timer da UI despeja a cada ~50 ms
+        private const int IntervaloLoteMs = 50;
+        private const int LimiteHistorico = 50000;
+        private readonly object _travaRecepcao = new();
+        private readonly StringBuilder _bufferRecepcao = new();
+        private readonly System.Windows.Forms.Timer _timerRecepcao = new() { Interval = IntervaloLoteMs };
 
         public FormSupervisorio()
         {
@@ -25,6 +33,9 @@ namespace DevSandbox.UI.Forms
             _engine.Reconectado += Engine_Reconectado;
 
             txtEnviar.InnerKeyDown += txtEnviar_KeyDown;
+
+            _timerRecepcao.Tick += TimerRecepcao_Tick;
+            _timerRecepcao.Start();
 
             AtualizarEstadoUI(conectado: false);
         }
@@ -119,15 +130,16 @@ namespace DevSandbox.UI.Forms
 
             if (!string.IsNullOrWhiteSpace(mensagem))
             {
-                try
+                if (_engine.EnviarDados(mensagem))
                 {
-                    _engine.EnviarDados(mensagem);
                     AppendHistorico($"[{DateTime.Now:HH:mm:ss}] Enviado -> {mensagem}");
                     // txtEnviar.Clear(); // Mantém o texto digitado após o envio
                 }
-                catch (Exception ex)
+                else
                 {
-                    MessageBox.Show($"Erro ao transmitir dados: {ex.Message}", "Falha de Envio", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Em falha de E/S o Core já disparou ConexaoPerdida (alerta de reconexão no histórico);
+                    // aqui só registra que esta mensagem não saiu, sem caixa modal e sem repetir o alerta.
+                    AppendHistorico($"[{DateTime.Now:HH:mm:ss}] ✖ Não enviado -> {mensagem}");
                 }
             }
         }
@@ -143,29 +155,54 @@ namespace DevSandbox.UI.Forms
 
         private void btnLimpar_Click(object sender, EventArgs e)
         {
+            lock (_travaRecepcao) { _bufferRecepcao.Clear(); }
             txtHistorico.Clear();
         }
 
         private void Engine_DadosRecebidos(object? sender, string dados)
         {
-            if (this.IsDisposed || !this.IsHandleCreated || !_engine.EstaConectado) return;
+            // Executa na thread da serial: apenas acumula (sem BeginInvoke por pedaço)
+            if (!_engine.EstaConectado) return;
 
-            if (this.InvokeRequired)
+            string linha = $"[{DateTime.Now:HH:mm:ss}] Recebido <- {dados}{Environment.NewLine}";
+            lock (_travaRecepcao)
             {
-                this.BeginInvoke(new Action(() => Engine_DadosRecebidos(sender, dados)));
-                return;
+                _bufferRecepcao.Append(linha);
+
+                // Proteção de memória se a UI ficar parada: mantém só a cauda do buffer
+                if (_bufferRecepcao.Length > LimiteHistorico)
+                {
+                    _bufferRecepcao.Remove(0, _bufferRecepcao.Length - LimiteHistorico / 2);
+                }
+            }
+        }
+
+        private void TimerRecepcao_Tick(object? sender, EventArgs e)
+        {
+            string lote;
+            lock (_travaRecepcao)
+            {
+                if (_bufferRecepcao.Length == 0) return;
+                lote = _bufferRecepcao.ToString();
+                _bufferRecepcao.Clear();
             }
 
-            AppendHistorico($"[{DateTime.Now:HH:mm:ss}] Recebido <- {dados}");
+            AppendBloco(lote);
         }
+
+        /// <summary>
+        /// Despeja na tela o que ainda está no buffer, preservando a ordem cronológica
+        /// antes de mensagens geradas pela própria UI (envio, alertas).
+        /// </summary>
+        private void DescarregarRecepcaoPendente() => TimerRecepcao_Tick(this, EventArgs.Empty);
 
         private void Engine_ConexaoPerdida(object? sender, EventArgs e)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_ConexaoPerdida(sender, e)));
+                InvocarNaUI(() => Engine_ConexaoPerdida(sender, e));
                 return;
             }
 
@@ -186,11 +223,11 @@ namespace DevSandbox.UI.Forms
 
         private void Engine_Reconectado(object? sender, EventArgs e)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_Reconectado(sender, e)));
+                InvocarNaUI(() => Engine_Reconectado(sender, e));
                 return;
             }
 
@@ -200,12 +237,24 @@ namespace DevSandbox.UI.Forms
 
         private void AppendHistorico(string texto)
         {
-            if (txtHistorico.TextLength > 50000)
+            DescarregarRecepcaoPendente();
+            AppendBloco(texto + Environment.NewLine);
+        }
+
+        private void AppendBloco(string bloco)
+        {
+            if (txtHistorico.IsDisposed) return;
+
+            if (txtHistorico.TextLength + bloco.Length > LimiteHistorico)
             {
-                txtHistorico.Text = txtHistorico.Text.Substring(25000);
+                string atual = txtHistorico.Text + bloco;
+                txtHistorico.Text = atual.Substring(Math.Max(0, atual.Length - LimiteHistorico / 2));
+            }
+            else
+            {
+                txtHistorico.AppendText(bloco);
             }
 
-            txtHistorico.AppendText(texto + Environment.NewLine);
             txtHistorico.SelectionStart = txtHistorico.TextLength;
             txtHistorico.ScrollToCaret();
         }
@@ -250,8 +299,32 @@ namespace DevSandbox.UI.Forms
             }
         }
 
+        // Guarda para callbacks vindos da thread da serial: a form pode estar fechando/descartada
+        private bool PodeAtualizarUI => !this.IsDisposed && !this.Disposing && this.IsHandleCreated;
+
+        private void InvocarNaUI(Action acao)
+        {
+            if (!PodeAtualizarUI) return;
+            try
+            {
+                this.BeginInvoke(acao);
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle destruído entre a checagem e o BeginInvoke (fechamento concorrente)
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            _timerRecepcao.Stop();
+            _timerRecepcao.Tick -= TimerRecepcao_Tick;
+            _timerRecepcao.Dispose();
+
+            // Desassina antes do Dispose: nenhum callback da serial chega com a form fechando
+            _engine.DadosRecebidos -= Engine_DadosRecebidos;
+            _engine.ConexaoPerdida -= Engine_ConexaoPerdida;
+            _engine.Reconectado -= Engine_Reconectado;
             _engine.Dispose();
             base.OnFormClosing(e);
         }

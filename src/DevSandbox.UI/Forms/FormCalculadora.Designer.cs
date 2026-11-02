@@ -170,7 +170,7 @@ namespace DevSandbox.UI.Forms
             lblBinarioValor.ForeColor = Color.FromArgb(76, 194, 255);
             lblBinarioValor.Location = new Point(110, 128);
             lblBinarioValor.Name = "lblBinarioValor";
-            lblBinarioValor.Size = new Size(295, 55);
+            lblBinarioValor.Size = new Size(305, 55);
             lblBinarioValor.TabIndex = 5;
             lblBinarioValor.Text = "-";
             // 

@@ -10,6 +10,7 @@ namespace DevSandbox.UI.Forms
     {
         private readonly BancadaEngine _engine = new();
         private bool _carregandoUI = true;
+        private const int LimiteTerminal = 50000;
 
         public FormBancada()
         {
@@ -174,7 +175,10 @@ namespace DevSandbox.UI.Forms
             else if (rb == rbPP6) cabo = EstadoCaboPP.FalhaCurto;
 
             lblStatusCabo.Text = $"Ativo: {cabo.ObterDescricao()}";
-            _engine.DefinirCabo(cabo);
+            if (!_engine.DefinirCabo(cabo))
+            {
+                AppendTerminal($"[não enviado] Cabo PP -> {cabo.ObterDescricao()} (só local: sem conexão ou falha de envio)");
+            }
         }
 
         private void rbCP_CheckedChanged(object? sender, EventArgs e)
@@ -191,7 +195,10 @@ namespace DevSandbox.UI.Forms
             else if (rb == rbCPE) estado = EstadoVeiculoCP.EstadoE;
 
             lblStatusVeiculo.Text = $"Ativo: {estado.ObterDescricao()}";
-            _engine.DefinirEstado(estado);
+            if (!_engine.DefinirEstado(estado))
+            {
+                AppendTerminal($"[não enviado] Estado CP -> {estado.ObterDescricao()} (só local: sem conexão ou falha de envio)");
+            }
         }
 
         private void btnEnviar_Click(object sender, EventArgs e)
@@ -199,8 +206,15 @@ namespace DevSandbox.UI.Forms
             string cmd = txtComando.Text.Trim();
             if (string.IsNullOrEmpty(cmd)) return;
 
-            _engine.EnviarComandoManual(cmd);
-            txtComando.Clear();
+            if (_engine.EnviarComandoManual(cmd))
+            {
+                txtComando.Clear();
+            }
+            else
+            {
+                // Mantém o texto digitado para o usuário reenviar depois de reconectar
+                AppendTerminal($"[não enviado] {cmd} (sem conexão ou falha de envio)");
+            }
         }
 
         private void txtComando_KeyDown(object sender, KeyEventArgs e)
@@ -219,11 +233,11 @@ namespace DevSandbox.UI.Forms
 
         private void Engine_ComandoEnviado(object? sender, string cmd)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_ComandoEnviado(sender, cmd)));
+                InvocarNaUI(() => Engine_ComandoEnviado(sender, cmd));
                 return;
             }
 
@@ -232,11 +246,11 @@ namespace DevSandbox.UI.Forms
 
         private void Engine_DadosRecebidos(object? sender, string dados)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_DadosRecebidos(sender, dados)));
+                InvocarNaUI(() => Engine_DadosRecebidos(sender, dados));
                 return;
             }
 
@@ -245,11 +259,11 @@ namespace DevSandbox.UI.Forms
 
         private void Engine_ConexaoPerdida(object? sender, EventArgs e)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_ConexaoPerdida(sender, e)));
+                InvocarNaUI(() => Engine_ConexaoPerdida(sender, e));
                 return;
             }
 
@@ -261,11 +275,11 @@ namespace DevSandbox.UI.Forms
 
         private void Engine_Reconectado(object? sender, EventArgs e)
         {
-            if (this.IsDisposed || !this.IsHandleCreated) return;
+            if (!PodeAtualizarUI) return;
 
             if (this.InvokeRequired)
             {
-                this.BeginInvoke(new Action(() => Engine_Reconectado(sender, e)));
+                InvocarNaUI(() => Engine_Reconectado(sender, e));
                 return;
             }
 
@@ -277,11 +291,44 @@ namespace DevSandbox.UI.Forms
         {
             if (txtTerminal.IsDisposed) return;
             string linha = $"[{DateTime.Now:HH:mm:ss}] {mensagem}{Environment.NewLine}";
-            txtTerminal.AppendText(linha);
+
+            // Teto de memória igual ao Supervisório: acima de 50.000 caracteres, descarta a metade mais antiga
+            if (txtTerminal.TextLength + linha.Length > LimiteTerminal)
+            {
+                string atual = txtTerminal.Text + linha;
+                txtTerminal.Text = atual.Substring(Math.Max(0, atual.Length - LimiteTerminal / 2));
+                txtTerminal.SelectionStart = txtTerminal.TextLength;
+                txtTerminal.ScrollToCaret();
+            }
+            else
+            {
+                txtTerminal.AppendText(linha);
+            }
+        }
+
+        // Guarda para callbacks vindos da thread da serial: a form pode estar fechando/descartada
+        private bool PodeAtualizarUI => !this.IsDisposed && !this.Disposing && this.IsHandleCreated;
+
+        private void InvocarNaUI(Action acao)
+        {
+            if (!PodeAtualizarUI) return;
+            try
+            {
+                this.BeginInvoke(acao);
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle destruído entre a checagem e o BeginInvoke (fechamento concorrente)
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // Desassina antes do Dispose: nenhum callback da serial chega com a form fechando
+            _engine.DadosRecebidos -= Engine_DadosRecebidos;
+            _engine.ComandoEnviado -= Engine_ComandoEnviado;
+            _engine.ConexaoPerdida -= Engine_ConexaoPerdida;
+            _engine.Reconectado -= Engine_Reconectado;
             _engine.Dispose();
             base.OnFormClosing(e);
         }

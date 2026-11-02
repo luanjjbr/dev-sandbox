@@ -25,12 +25,14 @@ namespace DevSandbox.UI.Common
                      ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer |
                      ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
+                     ControlStyles.SupportsTransparentBackColor |
+                     ControlStyles.Selectable, true);
 
+            this.TabStop = true;
             this.FlatStyle = FlatStyle.Flat;
             this.FlatAppearance.BorderSize = 0;
             this.Cursor = Cursors.Hand;
-            this.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
+            this.Font = ThemeManager.FontePadrao;
             this.Size = new Size(110, 34);
             this.BackColor = Color.Transparent;
         }
@@ -111,6 +113,18 @@ namespace DevSandbox.UI.Common
             base.OnMouseUp(mevent);
         }
 
+        protected override void OnGotFocus(EventArgs e)
+        {
+            Invalidate();
+            base.OnGotFocus(e);
+        }
+
+        protected override void OnLostFocus(EventArgs e)
+        {
+            Invalidate();
+            base.OnLostFocus(e);
+        }
+
         protected override void OnPaint(PaintEventArgs pevent)
         {
             Graphics g = pevent.Graphics;
@@ -181,6 +195,12 @@ namespace DevSandbox.UI.Common
                                     TextFormatFlags.WordEllipsis;
 
             TextRenderer.DrawText(g, Text, Font, rect, corTexto, flags);
+
+            // Indicador de foco: só aparece na navegação por teclado (ShowFocusCues)
+            if (Focused && ShowFocusCues && Enabled)
+            {
+                ThemeManager.DesenharFoco(g, rect, _cornerRadius);
+            }
         }
 
         private static Color ClarearCor(Color c, float fator)

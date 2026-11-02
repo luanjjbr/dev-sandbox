@@ -52,6 +52,18 @@ namespace DevSandbox.UI.Common
         public static readonly Color VermelhoPerigo = Color.FromArgb(239, 68, 68);     // #EF4444
         public static readonly Color RoxoDestaque = Color.FromArgb(168, 85, 247);      // #A855F7
 
+        // --- Fontes compartilhadas (cache GDI) ---
+        // Instâncias únicas, criadas uma vez e reutilizadas por toda a vida do processo.
+        // NÃO descartar: controles que as recebem não são donos delas.
+        public static readonly Font FontePadrao = new("Segoe UI", 9.5F, FontStyle.Regular);
+        public static readonly Font FonteBotao = new("Segoe UI", 9.5F, FontStyle.Bold);
+        public static readonly Font FonteEntrada = new("Segoe UI", 10F, FontStyle.Regular);
+        public static readonly Font FonteTerminal = new("Consolas", 10F, FontStyle.Regular);
+        public static readonly Font FonteSubtitulo = new("Segoe UI", 8.5F, FontStyle.Regular);
+
+        // --- Indicador de foco (navegação por teclado) ---
+        public static readonly Color CorFoco = Color.FromArgb(255, 255, 255);         // Contorno de foco (alto contraste)
+
         /// <summary>
         /// Aplica o modo escuro à barra de título nativa do Windows (Windows 10 Build 1809+ e Windows 11).
         /// </summary>
@@ -113,7 +125,7 @@ namespace DevSandbox.UI.Common
             btn.BackColor = corFundo;
             btn.ForeColor = corTexto;
             btn.Cursor = Cursors.Hand;
-            btn.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            btn.Font = FonteBotao;
         }
 
         public static void EstilarComboBox(ComboBox cbo)
@@ -121,7 +133,7 @@ namespace DevSandbox.UI.Common
             cbo.FlatStyle = FlatStyle.Flat;
             cbo.BackColor = FundoCard;
             cbo.ForeColor = TextoPrincipal;
-            cbo.Font = new Font("Segoe UI", 9.5F);
+            cbo.Font = FontePadrao;
         }
 
         public static void EstilarTextBox(TextBox txt, bool isTerminal = false)
@@ -131,13 +143,27 @@ namespace DevSandbox.UI.Common
             if (isTerminal)
             {
                 txt.ForeColor = VerdeTerminal;
-                txt.Font = new Font("Consolas", 10F, FontStyle.Regular);
+                txt.Font = FonteTerminal;
             }
             else
             {
                 txt.ForeColor = TextoPrincipal;
-                txt.Font = new Font("Segoe UI", 9.5F);
+                txt.Font = FontePadrao;
             }
+        }
+
+        /// <summary>
+        /// Desenha o contorno de foco no padrão Fluent (anel arredondado inset de 2 px),
+        /// usado pelos controles customizados quando recebem foco pelo teclado.
+        /// </summary>
+        public static void DesenharFoco(Graphics g, Rectangle area, int raio)
+        {
+            Rectangle anel = Rectangle.Inflate(area, -1, -1);
+            if (anel.Width <= 2 || anel.Height <= 2) return;
+
+            using GraphicsPath path = CriarRetanguloArredondado(anel, Math.Max(0, raio - 1));
+            using var pen = new Pen(CorFoco, 2f);
+            g.DrawPath(pen, path);
         }
 
         /// <summary>

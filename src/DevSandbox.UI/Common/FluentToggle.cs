@@ -21,8 +21,10 @@ namespace DevSandbox.UI.Common
                      ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer |
                      ControlStyles.ResizeRedraw |
-                     ControlStyles.SupportsTransparentBackColor, true);
+                     ControlStyles.SupportsTransparentBackColor |
+                     ControlStyles.Selectable, true);
 
+            this.TabStop = true;
             this.BackColor = Color.Transparent;
             this.Size = new Size(42, 22);
             this.Cursor = Cursors.Hand;
@@ -45,8 +47,32 @@ namespace DevSandbox.UI.Common
 
         protected override void OnClick(EventArgs e)
         {
+            if (CanFocus) Focus();
             Checked = !Checked;
             base.OnClick(e);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Space && Enabled)
+            {
+                Checked = !Checked;
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnGotFocus(EventArgs e)
+        {
+            Invalidate();
+            base.OnGotFocus(e);
+        }
+
+        protected override void OnLostFocus(EventArgs e)
+        {
+            Invalidate();
+            base.OnLostFocus(e);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -98,6 +124,12 @@ namespace DevSandbox.UI.Common
                     using var thumbBrush = new SolidBrush(Color.FromArgb(200, 200, 200));
                     g.FillEllipse(thumbBrush, thumbX, thumbY, thumbSize, thumbSize);
                 }
+            }
+
+            // Indicador de foco: anel externo ao trilho, só na navegação por teclado
+            if (Focused && ShowFocusCues && Enabled)
+            {
+                ThemeManager.DesenharFoco(g, rect, raio);
             }
         }
     }

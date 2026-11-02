@@ -27,6 +27,7 @@ namespace DevSandbox.UI.Common
 
             this.BackColor = _cardColor;
             this.Padding = new Padding(16);
+            this.TabStop = false; // Container: o foco de teclado vai para os controles internos
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -96,6 +97,20 @@ namespace DevSandbox.UI.Common
             base.OnMouseLeave(e);
         }
 
+        // Cartões clicáveis (EnableHoverEffect) destacam a borda quando um controle interno
+        // recebe foco pelo teclado, indicando qual cartão está ativo na navegação por Tab.
+        protected override void OnEnter(EventArgs e)
+        {
+            if (_enableHoverEffect) Invalidate();
+            base.OnEnter(e);
+        }
+
+        protected override void OnLeave(EventArgs e)
+        {
+            if (_enableHoverEffect) Invalidate();
+            base.OnLeave(e);
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
@@ -115,7 +130,8 @@ namespace DevSandbox.UI.Common
                     g.FillPath(brush, path);
                 }
 
-                using (var pen = new Pen(_borderColor, 1f))
+                bool focoInterno = _enableHoverEffect && ContainsFocus && ShowFocusCues;
+                using (var pen = new Pen(focoInterno ? ThemeManager.CorAcento : _borderColor, focoInterno ? 1.5f : 1f))
                 {
                     g.DrawPath(pen, path);
                 }

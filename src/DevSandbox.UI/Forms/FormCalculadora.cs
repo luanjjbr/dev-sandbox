@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevSandbox.Core.Converters;
@@ -41,95 +43,38 @@ namespace DevSandbox.UI.Forms
             lblBinarioValor.ForeColor = ThemeManager.CorAcento;
         }
 
-        private void btnConverterHex_Click(object sender, EventArgs e)
+        private void btnConverterHex_Click(object sender, EventArgs e) => Converter(BaseNumerica.Hexadecimal);
+        private void btnConverterDec_Click(object sender, EventArgs e) => Converter(BaseNumerica.Decimal);
+        private void btnConverterBin_Click(object sender, EventArgs e) => Converter(BaseNumerica.Binario);
+
+        /// <summary>
+        /// Converte a entrada na base informada ou, com <c>null</c>, detecta a base no Core (tecla Enter).
+        /// Toda a regra de parsing (prefixos, separadores, sinal, limites de 64 bits) fica na CalculadoraHex.
+        /// </summary>
+        private void Converter(BaseNumerica? baseEscolhida)
         {
+            string entrada = txtEntrada.Text;
             try
             {
-                string entrada = txtEntrada.Text;
-                long decimalValor = _calculadora.HexParaDecimal(entrada);
-                string hexFormatado = _calculadora.DecimalParaHex(decimalValor);
-                string binario = _calculadora.DecimalParaBinario(decimalValor);
+                long valor = baseEscolhida is BaseNumerica b
+                    ? _calculadora.Converter(entrada, b)
+                    : _calculadora.ConverterEntrada(entrada, out _);
 
-                ExibirResultados(hexFormatado, decimalValor, binario);
+                ExibirResultados(_calculadora.DecimalParaHex(valor), valor, _calculadora.DecimalParaBinario(valor));
             }
-            catch (ArgumentException ex)
+            catch (ArgumentException)
             {
-                MessageBox.Show(ex.Message, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Entrada sem dígitos: digite um valor para converter.",
+                                "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            catch (FormatException)
+            catch (FormatException ex)
             {
-                MessageBox.Show("Valor Hexadecimal inválido! Use apenas caracteres de 0-9 e A-F.",
-                                "Erro de Formatação", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Mensagens do Core: negativo, hífen fora de lugar ou dígito inválido para a base
+                MessageBox.Show(ex.Message, "Erro de Formatação", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (OverflowException)
             {
-                MessageBox.Show("O número digitado é muito grande para um inteiro de 64 bits.",
-                                "Erro de Limite", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnConverterDec_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                string entrada = txtEntrada.Text.Trim().Replace(" ", "").Replace("_", "");
-                if (string.IsNullOrWhiteSpace(entrada))
-                {
-                    MessageBox.Show("Digite um valor decimal.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                long decimalValor;
-                if (entrada.StartsWith("-"))
-                {
-                    decimalValor = long.Parse(entrada);
-                }
-                else
-                {
-                    ulong unsignedVal = ulong.Parse(entrada);
-                    decimalValor = unchecked((long)unsignedVal);
-                }
-
-                string hexFormatado = _calculadora.DecimalParaHex(decimalValor);
-                string binario = _calculadora.DecimalParaBinario(decimalValor);
-
-                ExibirResultados(hexFormatado, decimalValor, binario);
-            }
-            catch (FormatException)
-            {
-                MessageBox.Show("Valor Decimal inválido! Digite apenas dígitos numéricos de 0 a 9.",
-                                "Erro de Formatação", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (OverflowException)
-            {
-                MessageBox.Show("O número digitado é muito grande para um inteiro de 64 bits.",
-                                "Erro de Limite", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnConverterBin_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                string entrada = txtEntrada.Text;
-                long decimalValor = _calculadora.BinarioParaDecimal(entrada);
-                string hexFormatado = _calculadora.DecimalParaHex(decimalValor);
-                string binario = _calculadora.DecimalParaBinario(decimalValor);
-
-                ExibirResultados(hexFormatado, decimalValor, binario);
-            }
-            catch (ArgumentException ex)
-            {
-                MessageBox.Show(ex.Message, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            catch (FormatException)
-            {
-                MessageBox.Show("Valor Binário inválido! Use apenas dígitos 0 ou 1.",
-                                "Erro de Formatação", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (OverflowException)
-            {
-                MessageBox.Show("O valor binário excede a capacidade de 64 bits.",
+                MessageBox.Show("O valor excede a capacidade de 64 bits.",
                                 "Erro de Limite", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -142,7 +87,23 @@ namespace DevSandbox.UI.Forms
 
             lblHexValor.Text = _rawHex;
             lblDecimalValor.Text = dec.ToString("N0");
-            lblBinarioValor.Text = _calculadora.FormatarBinario(bin);
+            lblBinarioValor.Text = QuebrarBinarioEm32Bits(_calculadora.FormatarBinario(bin));
+        }
+
+        /// <summary>
+        /// Apresentação: com mais de 32 bits, quebra a linha na fronteira dos 32 bits menos significativos
+        /// (8 nibbles), garantindo no máximo 2 linhas de 39 caracteres para um valor de 64 bits.
+        /// </summary>
+        private static string QuebrarBinarioEm32Bits(string formatado)
+        {
+            string[] grupos = formatado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            const int gruposPorLinha = 8;
+            if (grupos.Length <= gruposPorLinha)
+                return formatado;
+
+            int corte = grupos.Length - gruposPorLinha;
+            return string.Join(' ', grupos, 0, corte) + Environment.NewLine +
+                   string.Join(' ', grupos, corte, gruposPorLinha);
         }
 
         private async void btnCopiarHex_Click(object sender, EventArgs e)
@@ -160,26 +121,61 @@ namespace DevSandbox.UI.Forms
             await CopiarParaClipboard(_rawBin, btnCopiarBin);
         }
 
+        // Botões com feedback "Copiado!" em andamento: evita reentrância (duplo clique) por botão
+        private readonly HashSet<FluentButton> _copiando = new();
+
+        private bool FormularioAtivo => !this.IsDisposed && !this.Disposing && this.IsHandleCreated;
+
         private async Task CopiarParaClipboard(string valor, FluentButton botao)
         {
             if (string.IsNullOrWhiteSpace(valor) || valor == "-")
                 return;
 
+            // Reentrância: se o feedback ainda está na tela, só recopia o valor, sem empilhar outro ciclo
+            if (_copiando.Contains(botao))
+            {
+                TentarCopiar(valor);
+                return;
+            }
+
+            if (!TentarCopiar(valor))
+                return;
+
+            _copiando.Add(botao);
+            string textoOriginal = botao.Text;
             try
             {
-                Clipboard.SetText(valor);
-                string textoOriginal = botao.Text;
                 botao.Text = "✓ Copiado!";
                 botao.CustomAccentColor = ThemeManager.VerdeEscuro;
                 botao.IsAccent = true;
+
                 await Task.Delay(1200);
-                botao.Text = textoOriginal;
-                botao.IsAccent = false;
-                botao.CustomAccentColor = null;
             }
-            catch
+            finally
             {
-                // Silencia concorrência com a área de transferência do Windows
+                _copiando.Remove(botao);
+
+                // O formulário pode ter sido fechado durante o Delay
+                if (FormularioAtivo && !botao.IsDisposed)
+                {
+                    botao.Text = textoOriginal;
+                    botao.IsAccent = false;
+                    botao.CustomAccentColor = null;
+                }
+            }
+        }
+
+        private static bool TentarCopiar(string valor)
+        {
+            try
+            {
+                Clipboard.SetText(valor);
+                return true;
+            }
+            catch (ExternalException)
+            {
+                // Área de transferência ocupada por outro processo do Windows
+                return false;
             }
         }
 
@@ -187,30 +183,9 @@ namespace DevSandbox.UI.Forms
         {
             if (e.KeyCode == Keys.Enter)
             {
-                string texto = txtEntrada.Text.Trim();
-                if (texto.StartsWith("0x", StringComparison.OrdinalIgnoreCase) || ContemLetrasHex(texto))
-                {
-                    btnConverterHex_Click(this, EventArgs.Empty);
-                }
-                else if (texto.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
-                {
-                    btnConverterBin_Click(this, EventArgs.Empty);
-                }
-                else
-                {
-                    btnConverterDec_Click(this, EventArgs.Empty);
-                }
+                Converter(null); // Base detectada pelo Core (0x → hex, 0b → bin, letras A–F → hex, senão decimal)
                 e.SuppressKeyPress = true;
             }
-        }
-
-        private static bool ContemLetrasHex(string texto)
-        {
-            foreach (char c in texto)
-            {
-                if ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) return true;
-            }
-            return false;
         }
     }
 }
