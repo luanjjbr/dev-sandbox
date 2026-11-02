@@ -11,7 +11,9 @@ namespace DevSandbox.Core.Bancada
     /// <remarks>
     /// <para>O firmware processa uma linha por vez e responde em ordem, então os comandos que esperam resposta
     /// ficam numa fila FIFO e cada <c>OK</c>/<c>ERRO</c>/<c>[STATUS ...]</c> conclui o mais antigo.
-    /// <c>help</c>, <c>?</c> e <c>debug stack</c> não entram na fila (respondem várias linhas, sem OK).</para>
+    /// <c>help</c>, <c>?</c> e <c>debug stack</c> não entram na fila (respondem várias linhas, sem OK): as linhas
+    /// que não concluem comando da fila são agrupadas até uma janela de silêncio e entregues em
+    /// <see cref="RespostaMultilinhaRecebida"/>.</para>
     /// <para>Prazo por atividade: qualquer linha recebida renova o prazo do comando da vez. Uma resposta que chega
     /// depois do <see cref="ResultadoComando.SemResposta"/> (dentro de mais um prazo) é consumida como órfã e não
     /// conclui o comando seguinte.</para>
@@ -32,6 +34,9 @@ namespace DevSandbox.Core.Bancada
         public const string DetalheCaractereInvalido =
             "O comando contém caractere fora do ASCII (ex.: acento ou 'ç') ou de controle; o firmware só aceita ASCII imprimível.";
 
+        /// <summary>Janela de silêncio padrão que encerra uma resposta multilinha (<c>help</c>, <c>debug stack</c>).</summary>
+        public static readonly TimeSpan JanelaSilencioMultilinhaPadrao = TimeSpan.FromMilliseconds(300);
+
         // Linha sem '\n' maior que isto é descartada (o firmware nunca envia linhas tão longas)
         private const int TamanhoMaximoLinha = 4096;
 
@@ -40,6 +45,9 @@ namespace DevSandbox.Core.Bancada
         private readonly TimeProvider _relogio;
         private readonly TimeSpan _timeoutResposta;
         private readonly ITimer _timerPrazo;
+        private readonly TimeSpan _janelaMultilinha;
+        private readonly ITimer _timerColeta;
+        private readonly LinkedList<Coleta> _coletas = new();
         private readonly object _lock = new();
         private readonly LinkedList<Pendente> _pendentes = new();
         private readonly Queue<Orfa> _orfas = new();
@@ -55,6 +63,13 @@ namespace DevSandbox.Core.Bancada
 
         /// <summary>Último cabo PP confirmado pelo firmware (<c>OK</c> ou <c>[STATUS CABO]</c>); <c>null</c> se nenhum.</summary>
         public EstadoCaboPP? CaboConfirmado { get; private set; }
+
+        /// <summary>
+        /// Pinos dos relés do CP ativos (22..31) segundo o último <c>[STATUS CP]</c> com o campo <c>Reles:</c>;
+        /// <c>null</c> se nenhum chegou. Não muda com o <c>OK</c> de um <c>estado ...</c>: peça
+        /// <see cref="SolicitarStatusCP"/> para atualizar. Nomes lógicos em <see cref="RelesCP.ObterNome"/>.
+        /// </summary>
+        public IReadOnlyList<int>? RelesConfirmados { get; private set; }
 
         /// <summary><see cref="ConclusaoComando.Id"/> do último comando iniciado (0 se nenhum).</summary>
         public long UltimoIdComando => Interlocked.Read(ref _ultimoId);
@@ -83,6 +98,16 @@ namespace DevSandbox.Core.Bancada
         /// <summary>Estado CP informado por um <c>[STATUS CP]</c> do firmware.</summary>
         public event EventHandler<EstadoVeiculoCP>? StatusCPRecebido;
 
+        /// <summary>Relés do CP ativos informados por um <c>[STATUS CP]</c> (vem depois do <see cref="StatusCPRecebido"/>).</summary>
+        public event EventHandler<IReadOnlyList<int>>? RelesCPAtualizados;
+
+        /// <summary>
+        /// Resposta completa de <c>help</c>, <c>?</c> ou <c>debug stack</c> (também pelo comando manual), entregue
+        /// após a janela de silêncio (<see cref="JanelaSilencioMultilinhaPadrao"/>) sem linhas novas. Se nada chegar
+        /// dentro do prazo de resposta, vem com a lista vazia. Pode vir do timer: a UI deve usar <c>BeginInvoke</c>.
+        /// </summary>
+        public event EventHandler<RespostaMultilinha>? RespostaMultilinhaRecebida;
+
         public event EventHandler? ConexaoPerdida;
         public event EventHandler? Reconectado;
 
@@ -100,8 +125,10 @@ namespace DevSandbox.Core.Bancada
         /// <param name="descartarSerial">Se <c>true</c> (padrão), o <see cref="Dispose"/> descarta também o motor serial.</param>
         /// <param name="relogio">Relógio para o prazo de resposta (padrão <see cref="TimeProvider.System"/>).</param>
         /// <param name="timeoutResposta">Prazo sem atividade (padrão <see cref="TimeoutRespostaPadrao"/>).</param>
+        /// <param name="janelaSilencioMultilinha">Silêncio que encerra uma resposta multilinha (padrão <see cref="JanelaSilencioMultilinhaPadrao"/>).</param>
         public BancadaEngine(ISerialEngine serialEngine, bool descartarSerial = true,
-                             TimeProvider? relogio = null, TimeSpan? timeoutResposta = null)
+                             TimeProvider? relogio = null, TimeSpan? timeoutResposta = null,
+                             TimeSpan? janelaSilencioMultilinha = null)
         {
             _serialEngine = serialEngine ?? throw new ArgumentNullException(nameof(serialEngine));
             _descartarSerial = descartarSerial;
@@ -110,7 +137,12 @@ namespace DevSandbox.Core.Bancada
             if (_timeoutResposta <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(timeoutResposta), "O prazo de resposta deve ser maior que zero.");
 
+            _janelaMultilinha = janelaSilencioMultilinha ?? JanelaSilencioMultilinhaPadrao;
+            if (_janelaMultilinha <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(janelaSilencioMultilinha), "A janela de silêncio deve ser maior que zero.");
+
             _timerPrazo = _relogio.CreateTimer(_ => ExpirarPendentes(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _timerColeta = _relogio.CreateTimer(_ => ExpirarColetas(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
             _serialEngine.DadosRecebidos += Serial_DadosRecebidos;
             _serialEngine.ConexaoPerdida += Serial_ConexaoPerdida;
@@ -167,6 +199,21 @@ namespace DevSandbox.Core.Bancada
         /// <summary>Pede o relatório do CP (<c>estado status</c>); o estado chega por <see cref="StatusCPRecebido"/>.</summary>
         public bool SolicitarStatusCP() => EnviarComando(EstadoVeiculoCPExtensions.ComandoStatus, null, null);
 
+        /// <summary>Pede o relatório do cabo (<c>cabo status</c>); o canal chega em <see cref="CaboConfirmado"/> e no <see cref="ComandoConcluido"/>.</summary>
+        public bool SolicitarStatusCabo() => EnviarComando(EstadoCaboPPExtensions.ComandoStatus, null, null);
+
+        /// <summary>Pede o <c>debug stack</c>; a resposta chega por <see cref="RespostaMultilinhaRecebida"/> (<see cref="RespostaMultilinha.Stack"/>).</summary>
+        public bool SolicitarDebugStack() => EnviarComando(ComandoDebugStack, null, null);
+
+        /// <summary>Pede o menu de ajuda (<c>help</c>); as linhas chegam por <see cref="RespostaMultilinhaRecebida"/>.</summary>
+        public bool SolicitarHelp() => EnviarComando(ComandoHelp, null, null);
+
+        /// <summary>Comando do diagnóstico de stack das tasks.</summary>
+        public const string ComandoDebugStack = "debug stack";
+
+        /// <summary>Comando do menu de ajuda.</summary>
+        public const string ComandoHelp = "help";
+
         /// <summary>
         /// <c>true</c> se o comando manual só tem ASCII imprimível (o que o firmware entende). A UI pode usar
         /// para validar a caixa de texto antes de enviar; <see cref="EnviarComandoManual"/> aplica a mesma regra.
@@ -213,7 +260,20 @@ namespace DevSandbox.Core.Bancada
             Espera espera = ClassificarEspera(cmd);
             Pendente? pendente = null;
             LinkedListNode<Pendente>? no = null;
-            if (espera != Espera.Nenhuma)
+            Coleta? coleta = null;
+            LinkedListNode<Coleta>? noColeta = null;
+            if (espera == Espera.Nenhuma)
+            {
+                // Resposta multilinha sem OK: agrupa as linhas até a janela de silêncio
+                coleta = new Coleta(cmd) { Timestamp = _relogio.GetTimestamp(), Transmitindo = true };
+                lock (_lock)
+                {
+                    if (_disposed) return false;
+                    noColeta = _coletas.AddLast(coleta);
+                    ReagendarColeta();
+                }
+            }
+            else
             {
                 pendente = new Pendente(id, cmd, espera, estado, cabo) { Timestamp = _relogio.GetTimestamp(), Transmitindo = true };
                 lock (_lock)
@@ -237,6 +297,15 @@ namespace DevSandbox.Core.Bancada
                     }
                 }
 
+                if (noColeta != null)
+                {
+                    lock (_lock)
+                    {
+                        if (noColeta.List != null) _coletas.Remove(noColeta);
+                        ReagendarColeta();
+                    }
+                }
+
                 ComandoConcluido?.Invoke(this, new ConclusaoComando(cmd, ResultadoComando.NaoEnviado, null, estado, cabo)
                 {
                     Id = id,
@@ -250,6 +319,15 @@ namespace DevSandbox.Core.Bancada
                 lock (_lock)
                 {
                     pendente.Transmitindo = false;
+                }
+            }
+
+            if (coleta != null)
+            {
+                lock (_lock)
+                {
+                    coleta.Transmitindo = false;
+                    ReagendarColeta();
                 }
             }
 
@@ -326,6 +404,15 @@ namespace DevSandbox.Core.Bancada
 
                 if (resposta.EstadoCP is { } estadoStatus) EstadoConfirmado = estadoStatus;
                 if (resposta.CaboPP is { } caboStatus) CaboConfirmado = caboStatus;
+                if (resposta.RelesAtivos is { } relesStatus) RelesConfirmados = relesStatus;
+
+                // Linha que não é OK/ERRO/[STATUS] (menu, [STACK]) vai para a resposta multilinha em curso
+                if (resposta.Tipo == TipoRespostaFirmware.Outra && _coletas.First?.Value is { } coleta)
+                {
+                    coleta.Linhas.Add(resposta.Linha);
+                    coleta.Timestamp = _relogio.GetTimestamp();
+                    ReagendarColeta();
+                }
 
                 ReagendarPrazo();
             }
@@ -333,6 +420,49 @@ namespace DevSandbox.Core.Bancada
             RespostaRecebida?.Invoke(this, resposta);
             if (concluido != null) ComandoConcluido?.Invoke(this, concluido);
             if (resposta.EstadoCP is { } estadoCP) StatusCPRecebido?.Invoke(this, estadoCP);
+            if (resposta.RelesAtivos is { } reles) RelesCPAtualizados?.Invoke(this, reles);
+        }
+
+        // Entrega a resposta multilinha da vez após a janela de silêncio (ou vazia, sem nenhuma linha no prazo de resposta).
+        private void ExpirarColetas()
+        {
+            var entregues = new List<RespostaMultilinha>();
+            lock (_lock)
+            {
+                if (_disposed) return;
+
+                while (_coletas.First?.Value is { } c && !c.Transmitindo
+                       && _relogio.GetElapsedTime(c.Timestamp) >= PrazoDaColeta(c))
+                {
+                    _coletas.RemoveFirst();
+                    entregues.Add(new RespostaMultilinha(c.Comando, c.Linhas.AsReadOnly()));
+
+                    // A próxima começa a contar agora (estava esperando a vez)
+                    if (_coletas.First?.Value is { } proxima) proxima.Timestamp = _relogio.GetTimestamp();
+                }
+                ReagendarColeta();
+            }
+
+            foreach (RespostaMultilinha r in entregues) RespostaMultilinhaRecebida?.Invoke(this, r);
+        }
+
+        // Com linhas: a janela de silêncio desde a última. Sem nenhuma: o prazo de resposta (o firmware pode estar
+        // ocupado com comandos anteriores, ex.: o break-before-make do "estado ...").
+        private TimeSpan PrazoDaColeta(Coleta c) => c.Linhas.Count > 0 ? _janelaMultilinha : _timeoutResposta;
+
+        // Deve ser chamado com _lock adquirido.
+        private void ReagendarColeta()
+        {
+            if (_disposed) return;
+
+            if (_coletas.First?.Value is not { } primeira)
+            {
+                _timerColeta.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                return;
+            }
+
+            TimeSpan restante = PrazoDaColeta(primeira) - _relogio.GetElapsedTime(primeira.Timestamp);
+            _timerColeta.Change(restante > TimeSpan.Zero ? restante : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
         }
 
         // Que resultado esta resposta dá ao comando que espera 'espera' (null = não o conclui).
@@ -391,8 +521,24 @@ namespace DevSandbox.Core.Bancada
         private void DescartarPendentes()
         {
             var descartados = new List<ConclusaoComando>();
+            var coletadas = new List<RespostaMultilinha>();
             lock (_lock)
             {
+                // Respostas multilinha em curso: entrega o que já chegou; descarta as que não receberam nada
+                LinkedListNode<Coleta>? noColeta = _coletas.First;
+                while (noColeta != null)
+                {
+                    LinkedListNode<Coleta>? proxima = noColeta.Next;
+                    Coleta c = noColeta.Value;
+                    if (!c.Transmitindo)
+                    {
+                        _coletas.Remove(noColeta);
+                        if (c.Linhas.Count > 0) coletadas.Add(new RespostaMultilinha(c.Comando, c.Linhas.AsReadOnly()));
+                    }
+                    noColeta = proxima;
+                }
+                ReagendarColeta();
+
                 LinkedListNode<Pendente>? no = _pendentes.First;
                 while (no != null)
                 {
@@ -410,6 +556,7 @@ namespace DevSandbox.Core.Bancada
                 ReagendarPrazo();
             }
 
+            foreach (RespostaMultilinha r in coletadas) RespostaMultilinhaRecebida?.Invoke(this, r);
             foreach (ConclusaoComando c in descartados) ComandoConcluido?.Invoke(this, c);
         }
 
@@ -492,7 +639,9 @@ namespace DevSandbox.Core.Bancada
 
                 // Dentro do lock: nenhum ReagendarPrazo/ExpirarPendentes concorrente toca o timer já descartado
                 _timerPrazo.Dispose();
+                _timerColeta.Dispose();
                 _pendentes.Clear();
+                _coletas.Clear();
                 _orfas.Clear();
                 _bufferLinha.Clear();
             }
@@ -532,5 +681,14 @@ namespace DevSandbox.Core.Bancada
         }
 
         private readonly record struct Orfa(Espera Espera, long Timestamp);
+
+        // Resposta multilinha em montagem. Mutável só sob _lock (Timestamp = última atividade ou início da vez).
+        private sealed class Coleta(string comando)
+        {
+            public string Comando { get; } = comando;
+            public List<string> Linhas { get; } = [];
+            public long Timestamp { get; set; }
+            public bool Transmitindo { get; set; }
+        }
     }
 }

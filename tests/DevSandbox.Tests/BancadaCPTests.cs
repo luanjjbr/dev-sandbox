@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using DevSandbox.Core.Bancada;
 using DevSandbox.Tests.Fakes;
 using Microsoft.Extensions.Time.Testing;
@@ -247,7 +248,8 @@ namespace DevSandbox.Tests
             if (raiz == null) Assert.Ignore("Firmware não encontrado a partir da pasta de testes.");
 
             string mainCpp = File.ReadAllText(Path.Combine(raiz!, "firmware", "Bancada", "src", "main.cpp"));
-            Assert.That(mainCpp, Does.Contain($"Serial.println(F(\"{texto}\"))"));
+            // Desde o commit 7143b04 o firmware imprime pela SaidaSerial (Saida.println); aceita os dois
+            Assert.That(mainCpp, Does.Match($@"(Serial|Saida)\.print(?:ln)?\(F\(""{Regex.Escape(texto)}""\)\)"));
         }
     }
 

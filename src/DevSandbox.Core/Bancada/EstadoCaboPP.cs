@@ -51,6 +51,9 @@ namespace DevSandbox.Core.Bancada
         };
 
         public static string ObterComandoSerial(this EstadoCaboPP cabo) => $"cabo {(int)cabo}";
+
+        /// <summary>Comando que pede o relatório do cabo (<c>[STATUS CABO]</c>).</summary>
+        public const string ComandoStatus = "cabo status";
     }
 }
 

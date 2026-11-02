@@ -59,7 +59,20 @@ namespace DevSandbox.Core.Bancada
         public const string PrefixoStatusCP = "[STATUS CP] Estado: ";
         public const string PrefixoStatusCabo = "[STATUS CABO] Canal: ";
 
+        /// <summary>Separador do campo de relés no <c>[STATUS CP]</c> (<c>EmuladorVeiculoCP::imprimirStatus</c>).</summary>
+        public const string SeparadorReles = " | Reles: ";
+
         public bool EhErro => Tipo == TipoRespostaFirmware.Erro;
+
+        /// <summary>
+        /// Pinos dos relés do CP ativos (22..31, na ordem do firmware), lidos do campo <c>Reles:</c> do
+        /// <c>[STATUS CP]</c>; lista vazia para <c>Reles: nenhum</c>; <c>null</c> se a linha não tem o campo
+        /// ou ele não foi reconhecido. Nomes lógicos em <see cref="RelesCP.ObterNome"/>.
+        /// </summary>
+        public IReadOnlyList<int>? RelesAtivos { get; init; }
+
+        /// <summary>Diagnóstico de uma linha <c>[STACK] ...</c> (resposta do <c>debug stack</c>); <c>null</c> nas demais.</summary>
+        public StackTasks? Stack { get; init; }
 
         /// <summary>Interpreta uma linha recebida do firmware.</summary>
         public static RespostaFirmware Interpretar(string? linha)
@@ -77,10 +90,13 @@ namespace DevSandbox.Core.Bancada
 
             if (texto.StartsWith(PrefixoStatusCP, StringComparison.Ordinal))
             {
-                // "[STATUS CP] Estado: BX+ | Vcp: 10 V | Conectado, limite superior | Reles: S7"
+                // "[STATUS CP] Estado: BX+ | Vcp: 10 V | Conectado, limite superior | Reles: D30 D29"
                 string codigo = PrimeiroCampo(texto.Substring(PrefixoStatusCP.Length));
                 EstadoVeiculoCP? estado = EstadoVeiculoCPExtensions.TentarInterpretarCodigo(codigo, out var e) ? e : null;
-                return new RespostaFirmware(TipoRespostaFirmware.StatusCP, texto, EstadoCP: estado);
+                return new RespostaFirmware(TipoRespostaFirmware.StatusCP, texto, EstadoCP: estado)
+                {
+                    RelesAtivos = InterpretarReles(texto)
+                };
             }
 
             if (texto.StartsWith(PrefixoStatusCabo, StringComparison.Ordinal))
@@ -93,7 +109,22 @@ namespace DevSandbox.Core.Bancada
                 return new RespostaFirmware(TipoRespostaFirmware.StatusCabo, texto, CaboPP: cabo);
             }
 
-            return new RespostaFirmware(TipoRespostaFirmware.Outra, texto);
+            return new RespostaFirmware(TipoRespostaFirmware.Outra, texto)
+            {
+                Stack = texto.StartsWith(StackTasks.Prefixo, StringComparison.Ordinal)
+                    ? StackTasks.TentarInterpretar(texto)
+                    : null
+            };
+        }
+
+        // "... | Reles: D30 D29" (último campo da linha) ou "... | Reles: nenhum"
+        private static IReadOnlyList<int>? InterpretarReles(string texto)
+        {
+            int i = texto.LastIndexOf(SeparadorReles, StringComparison.Ordinal);
+            if (i < 0) return null;
+            return RelesCP.TentarInterpretar(texto.Substring(i + SeparadorReles.Length), out IReadOnlyList<int> pinos)
+                ? pinos
+                : null;
         }
 
         private static MotivoErroFirmware ClassificarErro(string texto) => texto switch
