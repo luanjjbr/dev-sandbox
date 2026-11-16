@@ -19,6 +19,9 @@ namespace DevSandbox.UI.Forms
         private readonly StringBuilder _bufferRecepcao = new();
         private readonly System.Windows.Forms.Timer _timerRecepcao = new() { Interval = IntervaloLoteMs };
 
+        // Junta os pedaços do ReadExisting em linhas (corte em \n; texto sem \n sai após 100 ms ocioso)
+        private readonly MontadorLinhasSerial _montador = new();
+
         public FormSupervisorio()
         {
             InitializeComponent();
@@ -94,6 +97,7 @@ namespace DevSandbox.UI.Forms
             if (_engine.EstaConectado || _engine.TentandoReconectar)
             {
                 _engine.Desconectar();
+                RegistrarPendenteDescarregado();
                 AtualizarEstadoUI(conectado: false);
                 return;
             }
@@ -109,6 +113,8 @@ namespace DevSandbox.UI.Forms
             try
             {
                 int baudRateSelecionado = Convert.ToInt32(cboBaudRate.SelectedItem, CultureInfo.InvariantCulture);
+                // Nova conexão não herda texto pendente nem a marca do '\r' da conexão anterior
+                _montador.Limpar();
                 _engine.Conectar(portaSelecionada, baudRateSelecionado);
                 AtualizarEstadoUI(conectado: true);
             }
@@ -156,6 +162,7 @@ namespace DevSandbox.UI.Forms
 
         private void btnLimpar_Click(object sender, EventArgs e)
         {
+            _montador.Limpar();
             lock (_travaRecepcao) { _bufferRecepcao.Clear(); }
             txtHistorico.Clear();
         }
@@ -165,10 +172,22 @@ namespace DevSandbox.UI.Forms
             // Executa na thread da serial: apenas acumula (sem BeginInvoke por pedaço)
             if (!_engine.EstaConectado) return;
 
-            string linha = $"[{DateTime.Now:HH:mm:ss}] Recebido <- {dados}{Environment.NewLine}";
+            foreach (string linha in _montador.Adicionar(dados))
+            {
+                RegistrarRecebido(linha);
+            }
+        }
+
+        /// <summary>
+        /// Acumula uma linha recebida no buffer de recepção (pode rodar na thread da serial ou na UI).
+        /// O horário é o de quando a linha fechou.
+        /// </summary>
+        private void RegistrarRecebido(string linha)
+        {
+            string entrada = $"[{DateTime.Now:HH:mm:ss}] Recebido <- {linha}{Environment.NewLine}";
             lock (_travaRecepcao)
             {
-                _bufferRecepcao.Append(linha);
+                _bufferRecepcao.Append(entrada);
 
                 // Proteção de memória se a UI ficar parada: mantém só a cauda do buffer
                 if (_bufferRecepcao.Length > LimiteHistorico)
@@ -178,8 +197,19 @@ namespace DevSandbox.UI.Forms
             }
         }
 
+        /// <summary>Entrega o texto sem \n que ainda está no montador (desconexão/perda de conexão).</summary>
+        private void RegistrarPendenteDescarregado()
+        {
+            string? pendente = _montador.Descarregar();
+            if (pendente is not null) RegistrarRecebido(pendente);
+        }
+
         private void TimerRecepcao_Tick(object? sender, EventArgs e)
         {
+            // Texto sem \n parado há >= 100 ms vira linha
+            string? ocioso = _montador.ColetarPendenteSeOcioso();
+            if (ocioso is not null) RegistrarRecebido(ocioso);
+
             string lote;
             lock (_travaRecepcao)
             {
@@ -219,6 +249,7 @@ namespace DevSandbox.UI.Forms
             txtEnviar.Enabled = false;
             btnEnviar.Enabled = false;
 
+            RegistrarPendenteDescarregado();
             AppendHistorico($"[{DateTime.Now:HH:mm:ss}] ⚠️ ALERTA: Conexão interrompida. Tentando reconectar...");
         }
 
