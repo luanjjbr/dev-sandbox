@@ -285,7 +285,7 @@ namespace DevSandbox.Tests
             public void Conectar(string nomePorta, int baudRate) => EstaConectado = true;
             public void Desconectar() => EstaConectado = false;
 
-            public bool EnviarDados(string texto, bool adicionarNovaLinha = true)
+            public bool EnviarDados(string texto, FimDeLinha fimDeLinha)
             {
                 if (!FalharProximoEnvio) return true;
 
@@ -316,7 +316,7 @@ namespace DevSandbox.Tests
             public void Conectar(string nomePorta, int baudRate) { }
             public void Desconectar() { }
 
-            public bool EnviarDados(string texto, bool adicionarNovaLinha = true)
+            public bool EnviarDados(string texto, FimDeLinha fimDeLinha)
             {
                 DadosRecebidos?.Invoke(this, "OK\r\n");
                 return true;

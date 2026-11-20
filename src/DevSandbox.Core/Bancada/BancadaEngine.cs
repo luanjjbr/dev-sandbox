@@ -222,13 +222,21 @@ namespace DevSandbox.Core.Bancada
             !string.IsNullOrWhiteSpace(comando) && comando.All(c => c is >= ' ' and <= '~' || c == '\t');
 
         /// <summary>
-        /// Envia um comando livre. Retorna <c>true</c> se foi transmitido. Comando com caractere fora do ASCII
+        /// Envia um comando livre com o terminador <paramref name="fimDeLinha"/> (padrão <see cref="FimDeLinha.LF"/>,
+        /// o que o firmware espera). Retorna <c>true</c> se foi transmitido. Comando com caractere fora do ASCII
         /// imprimível é recusado sem transmitir (<see cref="ResultadoComando.NaoEnviado"/> com
-        /// <see cref="DetalheCaractereInvalido"/>).
+        /// <see cref="DetalheCaractereInvalido"/>). Os comandos automáticos (botões, status) usam sempre LF.
+        /// Comando vazio (ou só espaços) envia só o terminador — o firmware ignora a linha vazia, então não há
+        /// espera de resposta nem <see cref="ComandoConcluido"/>; com <see cref="FimDeLinha.Nenhum"/> retorna <c>false</c>.
         /// </summary>
-        public bool EnviarComandoManual(string comando)
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fimDeLinha"/> fora do enum.</exception>
+        public bool EnviarComandoManual(string comando, FimDeLinha fimDeLinha = FimDeLinha.LF)
         {
-            if (string.IsNullOrWhiteSpace(comando)) return false;
+            if (!Enum.IsDefined(fimDeLinha))
+                throw new ArgumentOutOfRangeException(nameof(fimDeLinha), fimDeLinha, "Fim de linha desconhecido.");
+
+            if (string.IsNullOrWhiteSpace(comando))
+                return fimDeLinha != FimDeLinha.Nenhum && EnviarComando("", null, null, fimDeLinha);
 
             string cmd = comando.Trim();
             InterpretarAlvoManual(cmd, out EstadoVeiculoCP? estado, out EstadoCaboPP? cabo);
@@ -245,10 +253,11 @@ namespace DevSandbox.Core.Bancada
                 return false;
             }
 
-            return EnviarComando(cmd, estado, cabo);
+            return EnviarComando(cmd, estado, cabo, fimDeLinha);
         }
 
-        private bool EnviarComando(string cmd, EstadoVeiculoCP? estado, EstadoCaboPP? cabo)
+        private bool EnviarComando(string cmd, EstadoVeiculoCP? estado, EstadoCaboPP? cabo,
+                                   FimDeLinha fimDeLinha = FimDeLinha.LF)
         {
             if (_disposed) return false;
 
@@ -262,7 +271,11 @@ namespace DevSandbox.Core.Bancada
             LinkedListNode<Pendente>? no = null;
             Coleta? coleta = null;
             LinkedListNode<Coleta>? noColeta = null;
-            if (espera == Espera.Nenhuma)
+            if (cmd.Length == 0)
+            {
+                // Linha vazia (só o terminador): o firmware ignora, nada a esperar
+            }
+            else if (espera == Espera.Nenhuma)
             {
                 // Resposta multilinha sem OK: agrupa as linhas até a janela de silêncio
                 coleta = new Coleta(cmd) { Timestamp = _relogio.GetTimestamp(), Transmitindo = true };
@@ -284,7 +297,7 @@ namespace DevSandbox.Core.Bancada
                 }
             }
 
-            bool enviado = _serialEngine.EstaConectado && _serialEngine.EnviarDados(cmd);
+            bool enviado = _serialEngine.EstaConectado && _serialEngine.EnviarDados(cmd, fimDeLinha);
 
             if (!enviado)
             {

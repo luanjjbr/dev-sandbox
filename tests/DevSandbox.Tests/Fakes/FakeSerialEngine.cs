@@ -8,6 +8,7 @@ namespace DevSandbox.Tests.Fakes
     internal sealed class FakeSerialEngine : ISerialEngine
     {
         private readonly List<string> _comandosTransmitidos = [];
+        private readonly List<FimDeLinha> _finsDeLinha = [];
 
         public bool EstaConectado { get; set; }
         public bool TentandoReconectar { get; set; }
@@ -17,6 +18,9 @@ namespace DevSandbox.Tests.Fakes
         public bool FalharEnvio { get; set; }
 
         public IReadOnlyList<string> ComandosTransmitidos => _comandosTransmitidos;
+
+        /// <summary>Terminador usado em cada item de <see cref="ComandosTransmitidos"/> (mesmo índice).</summary>
+        public IReadOnlyList<FimDeLinha> FinsDeLinha => _finsDeLinha;
 
         public event EventHandler<string>? DadosRecebidos;
         public event EventHandler? ConexaoPerdida;
@@ -33,10 +37,12 @@ namespace DevSandbox.Tests.Fakes
 
         public void Desconectar() => EstaConectado = false;
 
-        public bool EnviarDados(string texto, bool adicionarNovaLinha = true)
+        public bool EnviarDados(string texto, FimDeLinha fimDeLinha)
         {
-            if (!EstaConectado || string.IsNullOrEmpty(texto) || FalharEnvio) return false;
+            // Como o motor real: vazio só sai com terminador
+            if (!EstaConectado || FalharEnvio || (string.IsNullOrEmpty(texto) && fimDeLinha == FimDeLinha.Nenhum)) return false;
             _comandosTransmitidos.Add(texto);
+            _finsDeLinha.Add(fimDeLinha);
             return true;
         }
 

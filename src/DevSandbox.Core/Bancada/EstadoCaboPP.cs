@@ -50,6 +50,20 @@ namespace DevSandbox.Core.Bancada
             _                           => 0
         };
 
+        /// <summary>
+        /// Corrente máxima do cabo em amperes, codificada pelo resistor do PP (IEC 62196-2: 1500 Ω = 13 A,
+        /// 680 Ω = 20 A, 220 Ω = 32 A, 100 Ω = 63 A). <c>null</c> para circuito aberto, desconectado (4700 Ω,
+        /// valor da bancada) e falha/curto — não há cabo válido.
+        /// </summary>
+        public static int? ObterCorrenteMaxima(this EstadoCaboPP cabo) => cabo switch
+        {
+            EstadoCaboPP.Cabo13A => 13,
+            EstadoCaboPP.Cabo20A => 20,
+            EstadoCaboPP.Cabo32A => 32,
+            EstadoCaboPP.Cabo63A => 63,
+            _ => null
+        };
+
         public static string ObterComandoSerial(this EstadoCaboPP cabo) => $"cabo {(int)cabo}";
 
         /// <summary>Comando que pede o relatório do cabo (<c>[STATUS CABO]</c>).</summary>

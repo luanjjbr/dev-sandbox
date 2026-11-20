@@ -13,6 +13,9 @@ namespace DevSandbox.Core.Pomodoro
         private CancellationTokenSource? _cts;
         private bool _disposed;
 
+        // Número do ciclo atual (TransicaoPomodoro.Ciclo); muda só sob _lock, em Iniciar.
+        private long _ciclo;
+
         public EstadoPomodoro EstadoAtual { get; private set; } = EstadoPomodoro.Parado;
         public EstadoPomodoro EstadoAnterior { get; private set; } = EstadoPomodoro.Parado;
 
@@ -22,9 +25,32 @@ namespace DevSandbox.Core.Pomodoro
         public TimeSpan TempoRestante { get; private set; } = TimeSpan.Zero;
         public TimeSpan TempoTotal { get; private set; } = TimeSpan.Zero;
 
+        /// <summary>
+        /// Fração restante do ciclo (<see cref="TempoRestante"/> / <see cref="TempoTotal"/>), de 1,0 no início a 0,0
+        /// no fim — para o anel de progresso que esvazia. É 0,0 quando parado; mantém o valor durante a pausa.
+        /// </summary>
+        public double Progresso
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    if (TempoTotal <= TimeSpan.Zero || TempoRestante <= TimeSpan.Zero) return 0.0;
+                    return Math.Clamp(TempoRestante / TempoTotal, 0.0, 1.0);
+                }
+            }
+        }
+
         // Eventos para notificar a interface ou os testes
         public event Action<TimeSpan>? OnTick;
         public event Action<EstadoPomodoro>? OnEstadoMudou;
+
+        /// <summary>
+        /// Início, pausa, retomada, parada e conclusão de ciclos (alimenta <see cref="EstatisticasSessao"/>).
+        /// Disparado fora do lock; na conclusão vem da thread do timer, depois do tick 00:00 e antes de
+        /// <see cref="OnEstadoMudou"/>.
+        /// </summary>
+        public event Action<TransicaoPomodoro>? OnTransicao;
 
         public PomodoroEngine(TimeProvider? timeProvider = null)
         {
@@ -40,9 +66,16 @@ namespace DevSandbox.Core.Pomodoro
 
             CancellationToken token;
             CancellationTokenSource? ctsAnterior;
+            TransicaoPomodoro? interrompido = null;
+            long ciclo;
             lock (_lock)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
+
+                if (EstadoAtual != EstadoPomodoro.Parado)
+                    interrompido = new TransicaoPomodoro(TipoTransicaoPomodoro.Parado, EstadoAtual, TempoRestante, TempoTotal, _ciclo);
+
+                ciclo = ++_ciclo;
 
                 // Troca atômica de ciclo: o anterior perde a posse no mesmo lock em que o novo é criado
                 ctsAnterior = _cts;
@@ -55,12 +88,15 @@ namespace DevSandbox.Core.Pomodoro
             }
 
             CancelarEDescartar(ctsAnterior);
+            if (interrompido != null) NotificarTransicao(interrompido);
+            NotificarTransicao(new TransicaoPomodoro(TipoTransicaoPomodoro.Iniciado, estado, duracao, duracao, ciclo));
             _ = RodarTimerAsync(duracao, token);
         }
 
         public bool Pausar()
         {
             CancellationTokenSource? ctsToCancel;
+            TransicaoPomodoro transicao;
 
             lock (_lock)
             {
@@ -69,12 +105,14 @@ namespace DevSandbox.Core.Pomodoro
 
                 EstadoAnterior = EstadoAtual;
                 EstadoAtual = EstadoPomodoro.Pausado;
+                transicao = new TransicaoPomodoro(TipoTransicaoPomodoro.Pausado, EstadoAnterior, TempoRestante, TempoTotal, _ciclo);
 
                 ctsToCancel = _cts;
                 _cts = null;
             }
 
             CancelarEDescartar(ctsToCancel);
+            NotificarTransicao(transicao);
             NotificarEstadoMudou(EstadoPomodoro.Pausado);
             return true;
         }
@@ -83,6 +121,7 @@ namespace DevSandbox.Core.Pomodoro
         {
             CancellationToken token;
             TimeSpan duracaoRestante;
+            TransicaoPomodoro transicao;
 
             lock (_lock)
             {
@@ -91,11 +130,13 @@ namespace DevSandbox.Core.Pomodoro
 
                 EstadoAtual = EstadoAnterior;
                 duracaoRestante = TempoRestante;
+                transicao = new TransicaoPomodoro(TipoTransicaoPomodoro.Retomado, EstadoAtual, TempoRestante, TempoTotal, _ciclo);
 
                 _cts = new CancellationTokenSource();
                 token = _cts.Token;
             }
 
+            NotificarTransicao(transicao);
             _ = RodarTimerAsync(duracaoRestante, token);
             return true;
         }
@@ -103,9 +144,13 @@ namespace DevSandbox.Core.Pomodoro
         public void Parar()
         {
             CancellationTokenSource? ctsToCancel;
+            TransicaoPomodoro? transicao = null;
 
             lock (_lock)
             {
+                if (EstadoAtual != EstadoPomodoro.Parado)
+                    transicao = new TransicaoPomodoro(TipoTransicaoPomodoro.Parado, EstadoAtual, TempoRestante, TempoTotal, _ciclo);
+
                 ctsToCancel = _cts;
                 _cts = null;
                 EstadoAtual = EstadoPomodoro.Parado;
@@ -114,6 +159,7 @@ namespace DevSandbox.Core.Pomodoro
             }
 
             CancelarEDescartar(ctsToCancel);
+            if (transicao != null) NotificarTransicao(transicao);
         }
 
         private static void CancelarEDescartar(CancellationTokenSource? cts)
@@ -161,6 +207,8 @@ namespace DevSandbox.Core.Pomodoro
                 // Finalização num lock único: um Pausar/Parar/Iniciar concorrente ou acontece antes
                 // (e este laço deixa de ser o ciclo ativo) ou depois (e encontra o motor já Parado).
                 EstadoPomodoro estadoFinalizado;
+                TimeSpan totalFinalizado;
+                long cicloFinalizado;
                 CancellationTokenSource ctsFinalizado;
                 lock (_lock)
                 {
@@ -168,6 +216,8 @@ namespace DevSandbox.Core.Pomodoro
 
                     TempoRestante = TimeSpan.Zero;
                     estadoFinalizado = EstadoAtual;
+                    totalFinalizado = TempoTotal;
+                    cicloFinalizado = _ciclo;
                     EstadoAtual = EstadoPomodoro.Parado;
                     ctsFinalizado = _cts!;
                     _cts = null;
@@ -177,6 +227,8 @@ namespace DevSandbox.Core.Pomodoro
 
                 // Fora do lock: o último tick notificado é 00:00 e vem antes da mudança de estado
                 NotificarTick(TimeSpan.Zero);
+                // Pode chegar depois do Iniciado de um ciclo novo (Iniciar entre o lock acima e esta linha)
+                NotificarTransicao(new TransicaoPomodoro(TipoTransicaoPomodoro.Concluido, estadoFinalizado, TimeSpan.Zero, totalFinalizado, cicloFinalizado));
                 NotificarEstadoMudou(estadoFinalizado);
             }
             catch (OperationCanceledException)
@@ -214,6 +266,18 @@ namespace DevSandbox.Core.Pomodoro
             foreach (Action<EstadoPomodoro> handler in handlers.GetInvocationList().Cast<Action<EstadoPomodoro>>())
             {
                 try { handler(estado); }
+                catch (Exception) { /* isola falhas do assinante */ }
+            }
+        }
+
+        private void NotificarTransicao(TransicaoPomodoro transicao)
+        {
+            Action<TransicaoPomodoro>? handlers = OnTransicao;
+            if (handlers == null) return;
+
+            foreach (Action<TransicaoPomodoro> handler in handlers.GetInvocationList().Cast<Action<TransicaoPomodoro>>())
+            {
+                try { handler(transicao); }
                 catch (Exception) { /* isola falhas do assinante */ }
             }
         }

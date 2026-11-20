@@ -18,9 +18,19 @@ namespace DevSandbox.Core.Serial
         void Desconectar();
 
         /// <summary>
-        /// Transmite o texto. Retorna <c>true</c> só quando a escrita ocorreu; <c>false</c> se não há conexão,
-        /// se o texto é vazio ou se a escrita falhou (nesse caso dispara <c>ConexaoPerdida</c> e entra em reconexão).
+        /// Transmite o texto seguido do terminador <paramref name="fimDeLinha"/>. Texto vazio envia só o terminador
+        /// (CR/LF/CRLF). Retorna <c>true</c> só quando a escrita ocorreu; <c>false</c> se não há conexão, se não há
+        /// nada a enviar (texto vazio com <see cref="FimDeLinha.Nenhum"/>) ou se a escrita falhou (nesse caso
+        /// dispara <c>ConexaoPerdida</c> e entra em reconexão).
         /// </summary>
-        bool EnviarDados(string texto, bool adicionarNovaLinha = true);
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fimDeLinha"/> fora do enum.</exception>
+        bool EnviarDados(string texto, FimDeLinha fimDeLinha);
+
+        /// <summary>
+        /// Compatibilidade: <c>true</c> envia com <see cref="FimDeLinha.LF"/>, <c>false</c> com
+        /// <see cref="FimDeLinha.Nenhum"/>. Texto vazio continua retornando <c>false</c>.
+        /// </summary>
+        bool EnviarDados(string texto, bool adicionarNovaLinha = true) =>
+            !string.IsNullOrEmpty(texto) && EnviarDados(texto, adicionarNovaLinha ? FimDeLinha.LF : FimDeLinha.Nenhum);
     }
 }

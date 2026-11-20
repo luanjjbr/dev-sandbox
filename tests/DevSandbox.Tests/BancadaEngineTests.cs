@@ -98,7 +98,7 @@ namespace DevSandbox.Tests
             string? comandoNotificado = null;
             _engine.ComandoEnviado += (s, cmd) => comandoNotificado = cmd;
 
-            Assert.That(_engine.EnviarComandoManual("   "), Is.False);
+            Assert.That(_engine.EnviarComandoManual("   ", Core.Serial.FimDeLinha.Nenhum), Is.False);
             Assert.That(comandoNotificado, Is.Null);
 
             Assert.That(_engine.EnviarComandoManual("  help "), Is.True);

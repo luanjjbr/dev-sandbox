@@ -134,12 +134,15 @@ namespace DevSandbox.Core.Serial
         }
 
         /// <summary>
-        /// Transmite texto para a porta serial. Retorna <c>true</c> só se a escrita ocorreu.
+        /// Transmite texto + terminador numa única escrita. Retorna <c>true</c> só se a escrita ocorreu.
+        /// Texto vazio envia só o terminador (CR/LF/CRLF); vazio com <see cref="FimDeLinha.Nenhum"/> retorna <c>false</c>.
         /// Em falha de E/S fecha a porta, entra em reconexão e dispara <see cref="ConexaoPerdida"/>.
         /// </summary>
-        public bool EnviarDados(string texto, bool adicionarNovaLinha = true)
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="fimDeLinha"/> fora do enum.</exception>
+        public bool EnviarDados(string texto, FimDeLinha fimDeLinha)
         {
-            if (string.IsNullOrEmpty(texto) || _disposed) return false;
+            string dados = (texto ?? "") + fimDeLinha.ObterTerminador();
+            if (dados.Length == 0 || _disposed) return false;
 
             bool perdeuConexao;
             int sessao;
@@ -150,10 +153,7 @@ namespace DevSandbox.Core.Serial
 
                 try
                 {
-                    if (adicionarNovaLinha)
-                        porta.WriteLine(texto);
-                    else
-                        porta.Write(texto);
+                    porta.Write(dados);
 
                     return true;
                 }
