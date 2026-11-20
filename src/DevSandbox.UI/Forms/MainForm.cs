@@ -29,6 +29,11 @@ namespace DevSandbox.UI.Forms
             SuspendLayout();
 
             Text = "DevSandbox .NET 10";
+            using (var fluxo = typeof(MainForm).Assembly.GetManifestResourceStream("DevSandbox.UI.app.ico"))
+            {
+                if (fluxo is not null)
+                    Icon = new Icon(fluxo);
+            }
             StartPosition = FormStartPosition.CenterScreen;
             Font = ThemeManager.FonteUi;
             ClientSize = new Size(1240, 860);

@@ -12,7 +12,13 @@
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <ApplicationVisualStyles>true</ApplicationVisualStyles>
     <ApplicationDefaultFont>Segoe UI, 9pt</ApplicationDefaultFont>
+    <!-- Ícone do .exe (Explorer/atalhos); a janela usa o mesmo ícone, embutido abaixo. -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="app.ico" LogicalName="DevSandbox.UI.app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DevSandbox.Core\DevSandbox.Core.csproj" />
