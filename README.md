@@ -16,35 +16,44 @@ dev-sandbox/
 ├── CONTEXT.md                     # Documento de contexto técnico e arquitetural detalhado
 ├── publish-standalone.ps1         # Script para gerar executável único standalone
 ├── dist/                          # Pasta de compilação local (gerada automaticamente no build)
-│   └── standalone/                # Destino dos binários gerados pelo script de publicação
+│   └── standalone/                # Destino dos binários gerados pelo script de publicação (~49 MB)
 ├── firmware/                      # Firmware embarcado da bancada de testes EVSE
 │   └── Bancada/                   # Projeto PlatformIO + FreeRTOS (foco no ATmega2560 / Arduino Mega)
 ├── simulacao/                     # Simulação do hardware e circuito da bancada
 │   └── Bancada/                   # Circuito SimulIDE 2.0 (Arduino Mega) e guia de portas virtuais
 ├── src/
 │   ├── DevSandbox.Core/           # [Camada de Domínio / Regras de Negócio - net10.0 pura]
-│   │   ├── Bancada/               # BancadaEngine, EstadoCaboPP, EstadoVeiculoCP (11 estados), RespostaFirmware
-│   │   ├── Converters/            # CalculadoraHex, BaseNumerica
-│   │   ├── Pomodoro/              # PomodoroEngine (TimeProvider), EstadoPomodoro
-│   │   └── Serial/                # ISerialEngine, ISerialPort, SistemaSerialPort, SupervisorioSerialEngine
+│   │   ├── Bancada/               # BancadaEngine, ConclusaoComando, EstadoCaboPP, EstadoVeiculoCP (11 estados), RelesCP, RespostaFirmware, StackTasks
+│   │   ├── Converters/            # CalculadoraHex, BaseNumerica, OperacoesBits (operações puras de 64 bits)
+│   │   ├── Pomodoro/              # PomodoroEngine (TimeProvider), EstadoPomodoro, EstatisticasSessao, TransicaoPomodoro
+│   │   └── Serial/                # FimDeLinha, HistoricoComandos, ISerialEngine, ISerialPort, MontadorLinhasSerial, SistemaSerialPort, SupervisorioSerialEngine
 │   │
-│   └── DevSandbox.UI/             # [Camada de Apresentação / Interface Gráfica WinUI 3 Dark - net10.0-windows]
-│       ├── Common/                # ThemeManager (cache GDI, desenho de foco), botões, cards, caixas de texto Fluent
-│       ├── Forms/                 # MainForm, FormBancada, FormCalculadora, FormPomodoro, FormSupervisorio
-│       └── Program.cs             # Ponto de inicialização do executável (STAThread)
+│   └── DevSandbox.UI/             # [Camada de Apresentação / Interface Gráfica Nordic - net10.0-windows]
+│       ├── app.ico                # Ícone oficial da aplicação (>_ branco em quadrado Dark Slate)
+│       ├── Common/                # Design System Nordic (GDI+ puro): ThemeManager, BarraAbas, BotaoNordic, CardNordic, CaixaTextoNordic, SeletorNordic, SeletorSegmentado, Indicadores, TerminalView, BitMatrixControl, ProgressRingControl, Toast, Icones, PreferenciaTema
+│       ├── Forms/                 # MainForm (janela única com alternância de tema e abas integradas)
+│       ├── Telas/                 # Telas desacopladas (UserControls herdando de TelaBase): TelaInicio, TelaBancada, TelaSupervisorio, TelaCalculadora, TelaPomodoro
+│       └── Program.cs             # Ponto de inicialização do executável (STAThread com inicialização DPI e tema)
 │
 └── tests/
-    └── DevSandbox.Tests/          # [Camada de Testes Automatizados - NUnit 4]
+    └── DevSandbox.Tests/          # [Camada de Testes Automatizados - NUnit 4 (607 testes)]
         ├── Fakes/                 # Dublês de teste: FakeSerialPort, FakeSerialEngine
         ├── BancadaCPTests.cs      # Testes da máquina de estados CP (11 estados) e tolerâncias
         ├── BancadaEngineTests.cs  # Testes de envio, reconexão e eventos da bancada
         ├── BancadaRevisaoTests.cs # Testes de sincronização, timeouts e concorrência
-        ├── CalculadoraHexTests.cs # Testes de conversão de 64 bits e bases numéricas
+        ├── BancadaV2CoreTests.cs  # Testes dos novos comandos manuais e contratos da Bancada v2
+        ├── CalculadoraHexTests.cs # Testes de conversão de 64 bits e operações
         ├── CalculadoraHexEntradaTests.cs # Validação de prefixos, hífens, sinal negativo e separadores
-        ├── PomodoroEngineTests.cs # Testes determinísticos com FakeTimeProvider
-        ├── SupervisorioSerialEngineTests.cs # Testes do motor serial resiliente e watchdog
+        ├── CorrenteMaximaCaboTests.cs # Validação das correntes máximas nominais de cabo PP
+        ├── HistoricoComandosTests.cs # Testes de navegação e limites do histórico de comandos
+        ├── MontadorLinhasSerialTests.cs # Testes do montador de frames e bufferização serial
+        ├── NordicCoreTests.cs     # Testes de integração e comportamento dos componentes visuais Nordic
+        ├── PomodoroEngineTests.cs # Testes determinísticos com FakeTimeProvider e transições
         ├── QaBancada3cTests.cs    # Validação do contrato textual e desfechos com o firmware
-        └── QaBordasTests.cs       # Casos de borda e robustez de API
+        ├── QaBordasTests.cs       # Casos de borda e robustez de API
+        ├── QaCorrecoesTests.cs    # Testes de regressão de correções identificadas
+        ├── QaNordicBordasTests.cs # 95 testes específicos de robustez e limites da suíte Nordic
+        └── SupervisorioSerialEngineTests.cs # Testes do motor serial resiliente e watchdog
 ```
 
 ---
@@ -52,49 +61,68 @@ dev-sandbox/
 ### 🧩 Papel de Cada Camada
 
 #### 1. Camada de Domínio e Lógica (`DevSandbox.Core`)
-* **O que é:** Biblioteca de Classes (*Class Library*) pura em .NET 10 (`net10.0`), sem dependências visuais (sem referências a WinForms, WPF ou `System.Drawing`).
+* **O que é:** Biblioteca de Classes (*Class Library*) pura em .NET 10 (`net10.0`), sem dependências visuais (sem referências a `System.Windows.Forms` ou `System.Drawing`).
 * **Princípios Implementados:**
-  * **Inversão de Dependências e Abstrações:** Motores como `SupervisorioSerialEngine` implementam `ISerialEngine` e operam sobre portas `ISerialPort`, permitindo injeção de dublês em testes.
+  * **Inversão de Dependências e Abstrações:** Motores como `SupervisorioSerialEngine` e `BancadaEngine` implementam `ISerialEngine` e operam sobre abstrações `ISerialPort`, permitindo injeção de dublês em testes.
   * **Relógios Desacoplados:** O `PomodoroEngine` utiliza `TimeProvider` injetável (`System.TimeProvider`), permitindo simulação temporal precisa e determinística em testes unitários.
-  * **Confiabilidade de Transmissão:** Métodos de envio como `EnviarDados` e comandos da bancada retornam `bool` indicando se a transmissão ocorreu com sucesso, tratando exceções de E/S sem derrubar a aplicação.
-  * **Contrato Textual com Firmware:** Parser e gerador de comandos alinhados estritamente com o firmware (`estado <código>`, `cabo <0..6>`, `debug stack`, respostas `OK` / `ERRO: ...`).
-  * **Isolamento de Erros:** Disparos de eventos notificam os assinantes de forma isolada, impedindo que exceções em manipuladores externos interrompam laços internos.
+  * **Controle de Terminação Flexível (`FimDeLinha.cs`):** Enumeração com suporte a `Nenhum`, `CR`, `LF` e `CRLF`, acompanhada dos métodos de extensão `ObterTerminador()` e `ObterRotulo()`, suportada nativamente em `ISerialEngine.EnviarDados(string texto, FimDeLinha fimDeLinha)`.
+  * **Histórico de Comandos Serial (`HistoricoComandos.cs`):** Motor de navegação para até 100 comandos via setas (↑/↓), com prevenção automática de repetições consecutivas e preservação do rascunho em edição.
+  * **Montador de Linhas Seriais (`MontadorLinhasSerial.cs`):** Bufferização eficiente de recepção UART, montando linhas completas delimitadas por `\n` antes da entrega aos módulos consumidores.
+  * **Operações de 64 bits (`OperacoesBits.cs`):** Operações bitwise puras: `InverterBit`, `LerBit`, `TrocarEndian` (*byte swap* de 8 bytes), `DeslocarEsquerda` (`<< 1`), `DeslocarDireita` (`>> 1`), `Not`, `Maximo`, `ParaAscii` (8 bytes em *big-endian*) e `ParaInt64`.
+  * **Estatísticas e Transições Pomodoro (`EstatisticasSessao.cs`, `TransicaoPomodoro.cs`):** Rastreamento de ciclos (1 a 4, reportando 4/4 no descanso longo), tempo acumulado em foco e interrupções, além de cálculo instantâneo da fração de tempo decorrido via propriedade `Progresso` (0.0 a 1.0) e evento `OnTransicao`.
+  * **Mapeamento de Corrente Elétrica (`EstadoCaboPPExtensions.ObterCorrenteMaxima`):** Determinação da capacidade nominal do cabo PP (13 A, 20 A, 32 A, 63 A; `null` para cabo desconectado, resistor de bancada 4700 Ω ou curto-circuito).
+  * **Comandos Manuais na Bancada:** Suporte a `BancadaEngine.EnviarComandoManual(string comando, FimDeLinha fimDeLinha = FimDeLinha.LF)` com validação prévia de sintaxe via `ComandoManualValido`.
+  * **Isolamento de Erros:** Disparos de eventos notificam os assinantes de forma isolada, impedindo que exceções em manipuladores externos interrompam fluxos internos.
 
 #### 2. Camada de Apresentação (`DevSandbox.UI`)
-* **O que é:** Aplicação executável gráfica para Windows Forms (`net10.0-windows`) com estética moderna fiel ao Windows 11 (WinUI 3 Fluent Dark).
-* **Melhorias de Experiência e Desempenho:**
-  * **Controle da Bancada em Dois Níveis:** Seleção intuitiva de família de estado do CP (`AX`, `BX`, `CX`, `DX`, `E`) e seleção de subnível de tolerância (`Sup (+)`, `Nom`, `Inf (-)`), com confirmação em tempo real recebida do firmware (`Confirmado`, `Não enviado`, `Sem confirmação`, `ERRO`).
-  * **Acessibilidade e Foco por Teclado:** Suporte completo a navegação via teclado com renderização de anel de foco de alto contraste (`DesenharFoco`), facilitando operação sem mouse.
-  * **Recepção Serial em Lotes:** A recepção no terminal do Supervisório acumula dados e realiza despejos em lotes periódicos de ~50 ms, eliminando sobrecarga e travamentos por chamadas excessivas de `Invoke`.
-  * **Avisos Não Bloqueantes:** O término do ciclo Pomodoro emite alertas sonoros e pisca a barra de tarefas (`FlashWindowEx`) caso a janela esteja em segundo plano, sem travar a interface com diálogos modais (`MessageBox`).
-  * **Otimização GDI+:** O `ThemeManager` mantém um cache estático de fontes compartilhadas (`Segoe UI`, `Consolas`), prevenindo esgotamento de *handles* GDI do sistema operacional.
+* **O que é:** Aplicação executável gráfica para Windows Forms (`net10.0-windows`) com design system moderno **Nordic** (claro e escuro) integrado em uma janela única com abas.
+* **Melhorias de Experiência e Arquitetura Visual:**
+  * **Janela Única com Abas Integradas:** O antigo lançador de múltiplas janelas foi substituído pelo `MainForm.cs` unificado, que gerencia as telas como `UserControls` desacoplados herdando de `TelaBase` (`TelaInicio`, `TelaBancada`, `TelaSupervisorio`, `TelaCalculadora` e `TelaPomodoro`), navegáveis através da `BarraAbas.cs`.
+  * **Gerenciamento Dinâmico de Temas (`ThemeManager.cs`):** Suporte completo aos modos Claro (*Nordic Snow*) e Escuro (*Nordic Polar Night*). Na primeira execução, o aplicativo adota a preferência do sistema operacional (`AppsUseLightTheme`), persistindo a escolha do usuário em `%AppData%\DevSandbox\tema.json` (`PreferenciaTema.cs`). A troca de temas propaga-se dinamicamente por toda a árvore de controles sem necessidade de reinicialização.
+  * **Controles Próprios em GDI+ Puro (`Common/`):** Todos os componentes foram reescritos em GDI+ puro sem dependência do gerador `.Designer.cs` (`BotaoNordic`, `CardNordic`, `CaixaTextoNordic`, `SeletorNordic`, `SeletorSegmentado`, `Indicadores`, `TerminalView`, `BitMatrixControl`, `ProgressRingControl`, `Toast`, `BarraAbas`, `Icones`), eliminando componentes obsoletos da era Fluent/LedIndicator.
+  * **Ícone Oficial da Aplicação:** Ícone moderno em alta resolução (`src/DevSandbox.UI/app.ico`, símbolo `>_` em vetor branco sobre quadrado Dark Slate), incorporado ao executável (`ApplicationIcon`) e atribuído à janela principal (`MainForm`).
+  * **Scrollbars e Terminais Customizados:** O `TerminalView` possui barra de rolagem desenhada sob medida com estilo Nordic, suporte a *autoscroll* comutável (*Acompanhar o final*), histórico com setas e limite circular de buffer para evitar sobrecarga de memória.
+  * **Notificações Visuais Não Intrusivas:** Sistema de `Toast` flutuante e alerta via barra de tarefas com `FlashWindowEx`, dispensando o uso de diálogos modais bloqueantes (`MessageBox`).
 
 #### 3. Camada de Testes Automatizados (`DevSandbox.Tests`)
 * **O que é:** Suíte abrangente de testes automatizados com **NUnit 4** e adaptador de teste para .NET 10.
 * **Cobertura e Dublês:**
-  * **345 testes automatizados** cobrindo regras de negócio, limites de conversão, tratamento de exceções, máquinas de estado e matriz de desfechos de comunicação.
-  * Uso de dublês de hardware (`FakeSerialPort`, `FakeSerialEngine`) que simulam perdas abruptas de cabo, erros de leitura/escrita e respostas UART sem necessidade de portas físicas.
-  * Utilização do `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`) para testes instantâneos de timers assíncronos.
-  * **Cobertura de cerca de 85% de linhas** no `DevSandbox.Core`.
+  * **607 testes automatizados aprovados**, cobrindo regras de negócio, limites de conversão, tratamento de exceções, máquinas de estado, bufferização serial e tolerâncias de temporização.
+  * Inclusão de suítes aprofundadas como `NordicCoreTests.cs`, `QaNordicBordasTests.cs` (95 testes específicos de robustez e casos de borda), `BancadaV2CoreTests.cs`, `CorrenteMaximaCaboTests.cs`, `HistoricoComandosTests.cs`, `MontadorLinhasSerialTests.cs` e `QaCorrecoesTests.cs`.
+  * Uso intensivo de dublês de teste (`FakeSerialPort`, `FakeSerialEngine`) e temporização simulada determinística com `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`).
+  * Alta taxa de cobertura de código no `DevSandbox.Core`, garantindo estabilidade em refatorações.
 
 ---
 
 ## 🚀 Módulos Implementados Atualmente
 
 * **⚡ Emulador de Bancada EVSE (Modo 3 - IEC 61851-1 / IEC 62196-2)**:
-  * **11 Estados do Control Pilot (CP):** Suporte completo aos 11 estados de recarga normalizados: `AX` (12 V - Desconectado), `BX+`/`BX`/`BX-` (10/9/8 V - Conectado), `CX+`/`CX`/`CX-` (7/6/5 V - Carregando), `DX+`/`DX`/`DX-` (4/3/2 V - Carregando com Ventilação) e `E` (~1 V - Falha: 120 Ω do CP ao PE), conforme a Tabela II (limite superior/nominal/inferior). O Estado F (-12V) não é emulado pelo veículo pois é de responsabilidade da estação.
-  * **Protocolo Serial:** Comandos de estado `estado <ax|bx+|bx|bx-|cx+|cx|cx-|dx+|dx|dx-|e|status>` (com atalhos `a`, `b`, `c`, `d`), resistores de cabo `cabo <0..6>`, diagnóstico de memória `debug stack` e respostas padronizadas `OK` ou `ERRO: <mensagem>`.
-  * **Nota Técnica do Resistor 4700 Ω (PP):** O canal 1 (4700 Ω) é mantido como valor de teste e calibração de bancada, fora da tabela de cabos comerciais da norma IEC 62196-2.
-  * **Interface Visual Avançada (`FormBancada`):** Seleção de CP em dois níveis, painel de status com confirmação do firmware (`Confirmado`, `Não enviado`, `Sem confirmação`, `ERRO`), botão `Status` para sincronização manual, consulta automática ao conectar (com retry após reset por DTR) e monitor de terminal com teto de 50.000 caracteres.
+  * **11 Estados do Control Pilot (CP):** Suporte completo aos 11 estados de recarga normalizados: `AX` (12 V - Desconectado), `BX+`/`BX`/`BX-` (10/9/8 V - Conectado), `CX+`/`CX`/`CX-` (7/6/5 V - Carregando), `DX+`/`DX`/`DX-` (4/3/2 V - Carregando com Ventilação) e `E` (~1 V - Falha: 120 Ω do CP ao PE), conforme a Tabela II (limite superior/nominal/inferior). O Estado F (-12 V) não é emulado pelo veículo pois é de responsabilidade da estação.
+  * **Telemetria de Valores Nominais:** Exibição em tempo real das tensões teóricas (superior, nominal e inferior), resistências elétricas nominais de teste e corrente máxima suportada pelo cabo de recarga PP via `ObterCorrenteMaxima` (13 A, 20 A, 32 A e 63 A).
+  * **Indicador de Sincronismo Real:** Sinalização visual com badges coloridos (`CONFIRMADO` em verde quando o estado coincide com a resposta do firmware, ou `PENDENTE` em laranja durante o trânsito do comando).
+  * **Matriz de Relés D22–D31 Somente Leitura:** Mapeamento visual estritamente alinhado com o estado físico dos relés reportado pelo microcontrolador, garantindo fidelidade de monitoramento sem permitir overrides manuais conflitantes.
+  * **Botão "Reset CP (A)":** Atalho de segurança operacional que retorna a linha CP imediatamente ao estado inicial `AX` sem interferir na seleção configurada no cabo PP.
+  * **Terminal Serial da Bancada em Largura Total:** Monitor de comandos e respostas com seletor de fim de linha (`Nenhum`, `CR`, `LF`, `CRLF`), alternador *Acompanhar o final*, histórico de comandos com setas (↑/↓) e scrollbar customizada Nordic.
+  * **Nota Técnica do Resistor 4700 Ω (PP):** O canal 1 (4700 Ω) é mantido como valor de teste e calibração interna de bancada, fora da tabela de cabos comerciais da norma IEC 62196-2.
+
 * **🔌 Supervisório Serial (UART / COM)**:
   * Motor no `Core` (`SupervisorioSerialEngine`) sob contrato `ISerialEngine`, com detecção dinâmica de portas, watchdog inteligente via `GetPortNames()`, retorno booleano de envio (`EnviarDados`) e reconexão automática resiliente.
-  * Interface em `UI` (`FormSupervisorio`) com recepção em lote a cada 50 ms, histórico com teto de 50.000 caracteres e registro de mensagens não enviadas.
+  * Terminal serial desacoplado em altura fixa com recepção em lote a cada 50 ms e barra de rolagem customizada no estilo Nordic.
+  * Seletor de finalizador de linha com quatro modos (`Nenhum`, `CR`, `LF`, `CRLF`, com padrão em `LF`).
+  * Envio flexível: permite enviar linhas vazias (transmitindo somente os bytes do terminador selecionado) e preserva o foco e conteúdo da caixa de envio.
+  * Histórico de comandos com navegação rápida via setas (↑/↓) e toggle de rolagem automática (*Acompanhar o final*).
+
 * **⏱️ Pomodoro Timer**:
   * Motor no `Core` (`PomodoroEngine`) baseado em `TimeProvider`, com suporte seguro a `Pausar()`, `Retomar()`, cancelamento atômico, disparo garantido de `00:00` no fechamento de ciclo e proteção de manipuladores de eventos.
-  * Interface em `UI` (`FormPomodoro`) com presets rápidos (25m/15m/5m), mostrador dinâmico e alerta sonoro/visual não invasivo (`FlashWindowEx`).
-* **🔢 Conversor de Bases Numéricas (Calculadora Hex)**:
-  * Motor no `Core` (`CalculadoraHex`, enum `BaseNumerica`) com conversão bidirecional de 64 bits (Hexadecimal, Decimal e Binário), suporte a separadores (`_`, ` `) e validação estrita: hífens `-` só são permitidos como separadores entre dígitos (ex.: `FF-FF`, `1100-0011`) e números negativos são rejeitados com mensagem amigável.
-  * Interface em `UI` (`FormCalculadora`) com detecção inteligente de base, quebra visual em blocos de 32 bits para números binários de 64 bits e botões de cópia rápida com debounce.
+  * **Mostrador Circular Moderno (`ProgressRingControl`):** Anel de progresso que é consumido suavemente conforme a fração de tempo restante (`Progresso`), adaptando suas cores ao modo ativo (Foco, Pausa Curta ou Pausa Longa).
+  * **Estatísticas de Sessão em Memória (`EstatisticasSessao.cs`):** Monitoramento do ciclo atual (1 a 4, exibindo 4/4 durante o descanso longo), tempo acumulado em foco e total de interrupções registradas.
+  * **Alertas Não Bloqueantes:** Avisos sonoros integrados, destaque visual na barra de tarefas (`FlashWindowEx`) caso a janela esteja em segundo plano e notificações elegantes em `Toast`.
+
+* **🔢 Conversor de Bases Numéricas e Manipulação de Bits (Calculadora 64 bits)**:
+  * Motor no `Core` (`CalculadoraHex`, `OperacoesBits`): conversão bidirecional e manipulação matemática pura de 64 bits.
+  * **Matriz Interativa de 64 Bits (`BitMatrixControl`):** Grade de 4×16 bits interativos com alternância individual de bits por clique e destaque de estado ativo/inativo.
+  * **Operações de Bits Dedicadas:** Botões para inversão rápida de extremidade (*Swap Endian* de 8 bytes), deslocamento à esquerda (`<< 1`), deslocamento à direita (`>> 1`), negação lógica (`NOT`), zeramento (`Zerar`) e saturação máxima (`Máximo` - `0xFFFFFFFFFFFFFFFF`).
+  * **4 Exibições Sincronizadas Simultaneamente:** Leitura instantânea e coerente nos formatos Hexadecimal (`0x...`), Decimal Unsigned (`UInt64`), Decimal Signed (`Int64` em complemento de dois) e representação em caracteres ASCII (*big-endian*).
 
 ---
 
@@ -125,16 +153,16 @@ dev-sandbox/
 
 * **Linguagem**: C# 13+ / .NET 10.0 (`net10.0` / `net10.0-windows`)
 * **Compilação e Qualidade**: `Directory.Build.props` com `TreatWarningsAsErrors=true` e analisadores .NET ativos
-* **Interface Gráfica**: Windows Forms com Dark Mode nativo via DWM (`dwmapi.dll`) e componentes Fluent
+* **Interface Gráfica**: Windows Forms com Design System **Nordic** desenhado em GDI+ puro, Dark/Light Mode com detecção automática do Windows e persistência local
 * **Framework de Testes**: `NUnit 4`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`, `Microsoft.Extensions.TimeProvider.Testing`
-* **Comunicação Serial**: `System.IO.Ports` com contratos desacoplados `ISerialEngine` e `ISerialPort`
+* **Comunicação Serial**: `System.IO.Ports` com contratos desacoplados `ISerialEngine`, `ISerialPort` e montador de frames
 * **Firmware e Simulação**: PlatformIO, FreeRTOS, SimulIDE 2.0, HHD Virtual Serial Port Tools
 
 ---
 
 ## 🧪 Como Executar os Testes
 
-Execute toda a suíte de 345 testes automatizados via CLI:
+Execute toda a suíte de **607 testes automatizados** via CLI:
 
 ```powershell
 dotnet test dev-sandbox.slnx
@@ -173,12 +201,12 @@ dist/standalone/DevSandbox.UI.exe
 *(Nota: Na compilação em modo Release, os binários normais também são copiados para `dist/` através da regra `CopyToDist`).*
 
 ### 2. Distribuição via GitHub Releases
-* **Repositório Limpo:** O executável compilado `.exe` não é rastreado no histórico do Git (a pasta `app/` foi removida do versionamento e adicionada ao `.gitignore`).
-* **Lançamentos Oficiais:** A partir da versão **`v1.0.0`**, os executáveis standalone são disponibilizados diretamente na aba de **Releases** do repositório no GitHub, anexados a cada tag de versão publicada.
+* **Repositório Limpo:** O executável compilado `.exe` não é rastreado no histórico do Git (as pastas `dist/` e `app/` estão no `.gitignore`).
+* **Lançamentos Oficiais:** As releases oficiais **`v1.2.0`** e **`v1.2.1`** estão disponíveis diretamente na aba de **Releases** do repositório no GitHub (a versão `v1.2.1` traz o executável standalone `DevSandbox.UI.exe` de ~49 MB com o ícone oficial incorporado). As tags anteriores (`v1.0.0` e `v1.1.0`) permanecem preservadas no histórico do Git.
 
 ---
 
 ## 📱 Compatibilidade Multiplataforma
 
-* **Interface Gráfica (`DevSandbox.UI`)**: Restrita ao Windows Desktop (Windows 10/11), pois baseia-se em APIs Win32, DWM e GDI+ via Windows Forms (`net10.0-windows`).
+* **Interface Gráfica (`DevSandbox.UI`)**: Restrita ao Windows Desktop (Windows 10/11 x64), pois baseia-se em APIs Win32, DWM e GDI+ via Windows Forms (`net10.0-windows`).
 * **Lógica e Motores (`DevSandbox.Core`)**: 100% portável para qualquer plataforma suportada pelo .NET 10 (Linux, macOS, Android, iOS, WebAssembly), graças à ausência total de dependências visuais e ao desacoplamento completo de hardware via interfaces.
